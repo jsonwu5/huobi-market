@@ -1,0 +1,55 @@
+.padding-loop(@index, @px) when (@index > 0) {
+  .pt-@{index} {
+    padding-top: @px;
+  }
+
+  .pb-@{index} {
+    padding-bottom: @px;
+  }
+
+  .pl-@{index} {
+    padding-left: @px;
+  }
+
+  .pr-@{index} {
+    padding-right: @px;
+  }
+
+  .px-@{index} {
+    padding-left: @px;
+    padding-right: @px;
+  }
+
+  .py-@{index} {
+    padding-top: @px;
+    padding-bottom: @px;
+  }
+}
+
+.margin-loop(@index, @px) when (@index > 0) {
+  .mt-@{index} {
+    margin-top: @px;
+  }
+
+  .mb-@{index} {
+    margin-bottom: @px;
+  }
+
+  .ml-@{index} {
+    margin-left: @px;
+  }
+
+  .mr-@{index} {
+    margin-right: @px;
+  }
+
+  .mx-@{index} {
+    margin-left: @px;
+    margin-right: @px;
+  }
+
+  .my-@{index} {
+    margin-top: @px;
+    margin-bottom: @px;
+  }
+}
