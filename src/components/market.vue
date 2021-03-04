@@ -18,7 +18,14 @@
         >添加自选</a-button
       >
     </div>
-    <div class="flex jfe mt15">
+    <div class="flex jfe ac mt15">
+      <div class="mr15">
+        <a-switch
+          checked-children="红涨"
+          un-checked-children="绿涨"
+          v-model="upsColor"
+        />
+      </div>
       <a-popover title="自定义列">
         <template slot="content">
           <div :style="{ borderBottom: '1px solid #E9E9E9' }">
@@ -52,6 +59,22 @@
         :pagination="false"
         bordered
       >
+        <template slot="ups" slot-scope="value, row">
+          <a-badge
+            :count="`${row.ups > 0 ? '+' + row.ups : row.ups}%`"
+            :show-zero="true"
+            :number-style="{
+              backgroundColor:
+                row.ups > 0
+                  ? upsColor
+                    ? '#ff2e39'
+                    : '#52c41a'
+                  : upsColor
+                  ? '#52c41a'
+                  : '#ff2e39'
+            }"
+          ></a-badge>
+        </template>
         <div slot="action" slot-scope="value, row">
           <a-tooltip>
             <template slot="title">
@@ -61,6 +84,7 @@
               class="pointer"
               @click="delOptional(row)"
               type="star"
+              :style="{ fontSize: '18px' }"
               theme="filled"
             />
           </a-tooltip>
@@ -73,6 +97,7 @@
 <script>
 import pako from "pako";
 import { mapActions, mapMutations, mapState } from "vuex";
+import NP from "number-precision";
 
 const heartCheck = {
   timeout: 60 * 1000,
@@ -100,6 +125,7 @@ export default {
   name: "market",
   data() {
     return {
+      upsColor: true, // 涨跌色切换
       checkedList: [],
       indeterminate: true,
       checkAll: false,
@@ -121,12 +147,21 @@ export default {
           checkDisabled: true
         },
         {
+          title: "涨跌幅",
+          align: "center",
+          dataIndex: "ups",
+          width: 100,
+          checked: true,
+          checkDisabled: false,
+          scopedSlots: { customRender: "ups" }
+        },
+        {
           title: "最新",
           align: "center",
           dataIndex: "close",
           width: 100,
           checked: true,
-          checkDisabled: true,
+          checkDisabled: false,
           customRender: val => {
             return `$${val}`;
           }
@@ -197,12 +232,13 @@ export default {
   computed: {
     ...mapState({ coins: state => state.coinList }),
     ...mapState(["tableKeys", "myCoinList"]),
+    // 选择显示的列
     selectedColumns() {
       const columns = [];
       this.columns.forEach(item => {
         // 默认显示
         if (
-          item.checked ||
+          item.checkDisabled ||
           this.checkedList.some(col => col === item.dataIndex)
         ) {
           columns.push(item);
@@ -218,11 +254,18 @@ export default {
     }
   },
   created() {
+    // 先赋值内置的，后面可能有更新的情况
+    this.selectedColumns.forEach(item => {
+      this.checkedList.push(item.dataIndex);
+    });
+    // TODO 缓存里的配置覆盖默认的
+    // 再从本地缓存获取
     if (this.tableKeys.length) {
-      this.checkedList = this.tableKeys;
-    } else {
-      this.selectedColumns.forEach(item => {
-        this.checkedList.push(item.dataIndex);
+      this.tableKeys.forEach(item => {
+        if (!this.checkedList.some(cItem => cItem === item)) {
+          // 从倒数第二个位置插入
+          this.checkedList.splice(this.checkedList.length - 2, 0, item);
+        }
       });
     }
     this._getCoinList();
@@ -368,6 +411,12 @@ export default {
               item.low = low;
               const unit = 100000000;
               item.vol = vol > unit ? parseInt(vol / 100000000) + "亿" : vol;
+              // 计算涨跌百分比
+              // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
+              item.ups = NP.times(
+                NP.round(NP.divide(NP.minus(close, open), open), 4),
+                100
+              );
               return true;
             }
             return false;
