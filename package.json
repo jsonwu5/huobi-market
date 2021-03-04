@@ -1,6 +1,6 @@
 {
   "name": "huobi-market",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service build --mode dev --watch",

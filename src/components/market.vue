@@ -7,6 +7,7 @@
         class="width-100"
         mode="multiple"
         placeholder="请选择币种"
+        allowClear
         dropdownClassName="customSelect"
       >
         <a-select-option v-for="item in coins" :key="item">
@@ -58,7 +59,7 @@
             </template>
             <a-icon
               class="pointer"
-              @change="cancel(row)"
+              @click="delOptional(row)"
               type="star"
               theme="filled"
             />
@@ -103,7 +104,7 @@ export default {
       indeterminate: true,
       checkAll: false,
       loading: false,
-      selectedCoin: [], // 选择的币种
+      selectedCoin: [], // 选择的币种  添加自选
       selectedList: [], // 自选的列表
       wsUrl: "wss://api-aws.huobi.pro/ws", // ws wss
       lockReconnect: false, // 连接失败不进行重连
@@ -249,7 +250,14 @@ export default {
     // 保存自选到本地localStorage
     addOptional(list = []) {
       let data = JSON.parse(JSON.stringify(this.myCoinList));
-      data = data.concat(list);
+      // 去重添加
+      list.forEach(item => {
+        const isHave = this.myCoinList.some(dItem => dItem.name === item.name);
+        if (!isHave) {
+          data.push(item);
+        }
+      });
+      // data = data.concat(list);
       this.selectedList = data;
       this._setMyCoinList(data);
       this.getOptional();
@@ -276,14 +284,19 @@ export default {
       this.marketList = marketList;
       this.initWebSocket();
     },
-    cancel(row) {
+    // 取消自选
+    delOptional(row) {
+      const tIndex = this.marketList.findIndex(item => item.name === row.name);
+      this.marketList.splice(tIndex, 1);
       // 从本地获取自选的币种
-      this.selectedList.forEach((item, index) => {
+      this.selectedList.some((item, index) => {
         if (row.name === item) {
           this.selectedList.splice(index, 1);
+          return true;
         }
+        return false;
       });
-      this.addOptional(this.selectedList);
+      this._setMyCoinList(this.selectedList);
     },
     reconnect() {
       console.log("尝试重连");
@@ -295,6 +308,7 @@ export default {
         this.initWebSocket();
       }, 60 * 1000);
     },
+    // 初始化websocket
     initWebSocket() {
       try {
         if ("WebSocket" in window) {
