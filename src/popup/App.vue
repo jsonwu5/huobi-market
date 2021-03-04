@@ -1,6 +1,8 @@
 <template>
   <a-config-provider :locale="zhCN">
-    <market />
+    <div class="app">
+      <market />
+    </div>
   </a-config-provider>
 </template>
 
