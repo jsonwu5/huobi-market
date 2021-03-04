@@ -252,7 +252,7 @@ export default {
       let data = JSON.parse(JSON.stringify(this.myCoinList));
       // 去重添加
       list.forEach(item => {
-        const isHave = this.myCoinList.some(dItem => dItem.name === item.name);
+        const isHave = this.myCoinList.some(dItem => dItem === item);
         if (!isHave) {
           data.push(item);
         }
