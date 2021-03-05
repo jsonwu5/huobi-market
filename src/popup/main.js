@@ -7,8 +7,7 @@ import filters from "@/tools/filters";
 import "../styles/style.less";
 
 Vue.config.productionTip = false;
-
-Vue.config.devtools = true;
+Vue.config.devtools = process.env.NODE_ENV === "development";
 
 // 注册插件
 Vue.use(Antd);
@@ -19,7 +18,6 @@ Object.keys(filters).forEach(k => Vue.filter(k, filters[k]));
 // 全局属性iye
 Vue.prototype.$http = $http;
 
-/* eslint-disable no-new */
 new Vue({
   store,
   el: "#app",

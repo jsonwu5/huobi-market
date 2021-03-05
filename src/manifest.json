@@ -1,7 +1,6 @@
 {
   "manifest_version": 2,
   "name": "Huobi market",
-  "version":"1.0.6",
   "homepage_url": "https://github.com/jsonwu5/huobi-market",
   "description": "A Huobi market Browser Extension",
   "default_locale": "zh_CN",

@@ -4,7 +4,7 @@
 
 ```shell
   npm install
-  npm run serve
+  npm run dev
 ```
 
 - 生成dist目录后
