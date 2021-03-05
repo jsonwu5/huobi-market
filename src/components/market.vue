@@ -37,6 +37,7 @@
               全选
             </a-checkbox>
           </div>
+          <!-- 自定义列字段列表 -->
           <a-checkbox-group v-model="checkedList" @change="onChange">
             <a-checkbox
               v-for="item in columns"
@@ -99,44 +100,22 @@ import pako from "pako";
 import { mapActions, mapMutations, mapState } from "vuex";
 import NP from "number-precision";
 
-const heartCheck = {
-  timeout: 60 * 1000,
-  timer: null,
-  serverTimer: null,
-  reset() {
-    this.timer && clearTimeout(this.timer);
-    this.serverTimer && clearTimeout(this.serverTimer);
-  },
-  start(ws) {
-    this.reset();
-    this.timer = setTimeout(() => {
-      // console.log('发送心跳,后端收到后，返回一个心跳消息')
-      // onmessage拿到返回的心跳就说明连接正常
-      ws.send(JSON.stringify({ heart: 1 }));
-      this.serverTimer = setTimeout(() => {
-        // 如果超过一定时间还没响应(响应后触发重置)，说明后端断开了
-        ws.close();
-      }, this.timeout);
-    }, this.timeout);
-  }
-};
-
 export default {
   name: "market",
   data() {
     return {
       upsColor: true, // 涨跌色切换
-      checkedList: [],
-      indeterminate: true,
-      checkAll: false,
-      loading: false,
+      checkedList: [], // 选择的字段列表
+      indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
+      checkAll: false, // 是否全选所有字段
+      loading: false, // 是否加载中
       selectedCoin: [], // 选择的币种  添加自选
-      selectedList: [], // 自选的列表
-      wsUrl: "wss://api-aws.huobi.pro/ws", // ws wss
+      selectedList: [], // 当前自选的列表（包含本地缓存）
+      wsUrl: process.env.VUE_APP_WS,
       lockReconnect: false, // 连接失败不进行重连
       maxReconnect: 5, // 最大重连次数，若连接失败
       socket: null, // websocket实例
-      marketList: [], // 自选的币种行情概要
+      marketList: [], // 自选的币种行情数据
       columns: [
         {
           title: "Coin",
@@ -249,6 +228,7 @@ export default {
     indexStyle() {
       const len = this.selectedColumns.length;
       return {
+        // 根据表格字段动态设置页面的width
         width: `${len > 4 ? len * 80 : 400}px`
       };
     }
@@ -274,12 +254,14 @@ export default {
   methods: {
     ...mapMutations(["_setMyCoinList", "_setTableKeys"]),
     ...mapActions(["_getCoinList"]),
+    // 自选列表变化
     onChange(checkedList) {
       this.indeterminate =
         !!checkedList.length && checkedList.length < this.columns.length;
       this.checkAll = checkedList.length === this.columns.length;
       this._setTableKeys(checkedList);
     },
+    // 自定义列全选所有字段
     onCheckAllChange(e) {
       Object.assign(this, {
         checkedList: e.target.checked
@@ -300,7 +282,6 @@ export default {
           data.push(item);
         }
       });
-      // data = data.concat(list);
       this.selectedList = data;
       this._setMyCoinList(data);
       this.getOptional();
@@ -321,7 +302,8 @@ export default {
           id: item,
           count: 0,
           low: 0,
-          vol: 0
+          vol: 0,
+          ups: 0
         });
       });
       this.marketList = marketList;
@@ -349,12 +331,13 @@ export default {
       setTimeout(() => {
         // this.maxReconnect-- // 不做限制 连不上一直重连
         this.initWebSocket();
-      }, 60 * 1000);
+      }, 10 * 1000);
     },
     // 初始化websocket
     initWebSocket() {
       try {
         if ("WebSocket" in window) {
+          this.loading = true;
           this.socket = new WebSocket(this.wsUrl);
         } else {
           console.log("您的浏览器不支持websocket");
@@ -364,12 +347,13 @@ export default {
         this.socket.onmessage = this.websocketonmessage;
         this.socket.onclose = this.websocketclose;
       } catch (e) {
+        this.loading = false;
         this.reconnect();
       }
     },
     websocketonopen() {
+      this.loading = false;
       console.log("WebSocket连接成功", this.socket.readyState);
-      heartCheck.start(this.socket);
       // 循环订阅每个币种的主题消息d
       if (this.socket && this.marketList.length) {
         this.marketList.forEach(item => {
@@ -378,13 +362,17 @@ export default {
       }
     },
     websocketonerror(e) {
-      console.log("WebSocket连接发生错误", e);
+      console.log("WebSocket连接发生错误：", e);
       this.reconnect();
     },
     // 接收数据并处理
     websocketonmessage(e) {
       this.blob2json(e.data, res => {
         // console.log("接收到的数据：", res);
+        if (res.ping) {
+          // 回应心跳包
+          this.socket.send(JSON.stringify(res));
+        }
         if (res.ch) {
           // 解析币种
           const coinName = res.ch.split(".")[1].split("usdt")[0];
@@ -422,11 +410,9 @@ export default {
           });
         }
       });
-      // 消息获取成功，重置心跳
-      heartCheck.start(this.socket);
     },
     websocketclose(e) {
-      console.log("connection closed (" + e.code + ")");
+      console.log("connection closed:", e);
       this.reconnect();
     },
     /**
@@ -456,7 +442,11 @@ export default {
 
       this.socket.send(JSON.stringify(data));
     },
-    //数据接收
+    /**
+     * 解压websocket返回的数据
+     * @param e { Object } 返回的数据
+     * @param callback { Function } 回调函数
+     */
     blob2json(e, callback) {
       let reader = new FileReader();
       reader.readAsArrayBuffer(e, "utf-8");
@@ -471,6 +461,7 @@ export default {
       };
     }
   },
+  // 页面注销，关闭websocket
   destroyed() {
     this.socket.close();
   }
