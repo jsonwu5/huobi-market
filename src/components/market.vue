@@ -370,11 +370,10 @@ export default {
     websocketonopen() {
       console.log("WebSocket连接成功", this.socket.readyState);
       heartCheck.start(this.socket);
-      // this.websocketsend();
       // 循环订阅每个币种的主题消息d
       if (this.socket && this.marketList.length) {
         this.marketList.forEach(item => {
-          this.websocketsend(item.name);
+          this.getKline(item.name);
         });
       }
     },
@@ -431,14 +430,30 @@ export default {
       this.reconnect();
     },
     /**
-     * 订阅指定币主题
-     * @param coin
+     * 订阅指定币最近24小时的行情概要数据
+     * API: https://huobiapi.github.io/docs/spot/v1/cn/#7c47ef3411
+     * @param coin { String } 自选币种名称
      */
-    websocketsend(coin) {
+    getSynopsisBy24h(coin) {
       let data = {
         sub: `market.${coin}usdt.detail`,
         id: "id1"
       };
+      this.socket.send(JSON.stringify(data));
+    },
+    /**
+     * 获取K线行情数据
+     * API: https://huobiapi.github.io/docs/spot/v1/cn/#k-2
+     * @param coin { String } 自选币种名称
+     * @param period { String } K线周期	1min, 5min, 15min, 30min, 60min, 4hour, 1day, 1mon, 1week, 1year
+     */
+    getKline(coin, period = "1day") {
+      //
+      let data = {
+        sub: `market.${coin}usdt.kline.${period}`,
+        id: "id1"
+      };
+
       this.socket.send(JSON.stringify(data));
     },
     //数据接收
