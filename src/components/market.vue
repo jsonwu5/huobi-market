@@ -97,8 +97,13 @@
 
 <script>
 import pako from "pako";
-import { mapActions, mapMutations, mapState } from "vuex";
 import NP from "number-precision";
+import { mapActions, mapMutations, mapState } from "vuex";
+
+// 当用户的自选为空时，使用内置默认的自选
+const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
+
+NP.enableBoundaryChecking(false);
 
 export default {
   name: "market",
@@ -110,11 +115,13 @@ export default {
       checkAll: false, // 是否全选所有字段
       loading: false, // 是否加载中
       selectedCoin: [], // 选择的币种  添加自选
-      selectedList: [], // 当前自选的列表（包含本地缓存）
+
       wsUrl: process.env.VUE_APP_WS,
       lockReconnect: false, // 连接失败不进行重连
       maxReconnect: 5, // 最大重连次数，若连接失败
       socket: null, // websocket实例
+
+      optionalCoins: [], // 当前自选的币种列表（包含本地缓存）
       marketList: [], // 自选的币种行情数据
       columns: [
         {
@@ -122,8 +129,8 @@ export default {
           align: "center",
           dataIndex: "name",
           width: 50,
-          checked: true,
-          checkDisabled: true
+          checked: true, // 是否默认勾选
+          checkDisabled: true // 是否默认禁用
         },
         {
           title: "涨跌幅",
@@ -235,13 +242,16 @@ export default {
   },
   created() {
     // 先赋值内置的，后面可能有更新的情况 test
-    this.selectedColumns.forEach(item => {
-      this.checkedList.push(item.dataIndex);
+    this.columns.forEach(item => {
+      if (item.checked) {
+        this.checkedList.push(item.dataIndex);
+      }
     });
     // TODO 缓存里的配置覆盖默认的
     // 再从本地缓存获取
     if (this.tableKeys.length) {
       this.tableKeys.forEach(item => {
+        // 去重添加
         if (!this.checkedList.some(cItem => cItem === item)) {
           // 从倒数第二个位置插入
           this.checkedList.splice(this.checkedList.length - 2, 0, item);
@@ -282,17 +292,23 @@ export default {
           data.push(item);
         }
       });
-      this.selectedList = data;
+      this.optionalCoins = data;
       this._setMyCoinList(data);
       this.getOptional();
     },
     // 从本地获取自选的币种
     getOptional() {
       // 从本地获取自选的币种
-      this.selectedList = JSON.parse(JSON.stringify(this.myCoinList));
+      this.optionalCoins = JSON.parse(JSON.stringify(this.myCoinList));
+      // 用户刚安装，没有自选时，使用内置默认的自选
+      if (this.optionalCoins.length === 0) {
+        this.optionalCoins = DEFAULTCOINS;
+        // 并缓存到本地
+        this._setMyCoinList(DEFAULTCOINS);
+      }
       const marketList = [];
       // 组合成table需要的数据格式
-      this.selectedList.forEach(item => {
+      this.optionalCoins.forEach(item => {
         marketList.push({
           name: item,
           amount: 0,
@@ -314,14 +330,14 @@ export default {
       const tIndex = this.marketList.findIndex(item => item.name === row.name);
       this.marketList.splice(tIndex, 1);
       // 从本地获取自选的币种
-      this.selectedList.some((item, index) => {
+      this.optionalCoins.some((item, index) => {
         if (row.name === item) {
-          this.selectedList.splice(index, 1);
+          this.optionalCoins.splice(index, 1);
           return true;
         }
         return false;
       });
-      this._setMyCoinList(this.selectedList);
+      this._setMyCoinList(this.optionalCoins);
     },
     reconnect() {
       console.log("尝试重连");
