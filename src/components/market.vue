@@ -254,7 +254,7 @@ export default {
     }
   },
   created() {
-    // 先赋值内置的，后面可能有更新的情况
+    // 先赋值内置的，后面可能有更新的情况 test
     this.selectedColumns.forEach(item => {
       this.checkedList.push(item.dataIndex);
     });
