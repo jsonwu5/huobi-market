@@ -1,0 +1,40 @@
+on:
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Release
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      -   uses: actions/checkout@v2
+      -   run: |
+            git fetch --prune --unshallow
+
+      -   name: Install Node.js
+          uses: actions/setup-node@v1
+          with:
+            node-version: 12.x
+
+      -   run: yarn install --frozen-lockfile
+
+      -   run: yarn build
+
+      -   name: Create Release
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ github.ref }}
+            release_name: Release ${{ github.ref }}
+
+      -   name: Upload Assets to Release with a wildcard
+          uses: csexton/release-asset-action@v2
+          with:
+            pattern: "artifacts/*.zip"
+            github-token: ${{ secrets.GITHUB_TOKEN }}
+            release-url: ${{ steps.create_release.outputs.upload_url }}
