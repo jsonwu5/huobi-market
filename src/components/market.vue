@@ -384,7 +384,7 @@ export default {
                 open,
                 close,
                 high,
-                id,
+                // id,
                 count,
                 low,
                 vol
@@ -393,7 +393,7 @@ export default {
               item.open = open;
               item.close = close;
               item.high = high;
-              item.id = id;
+              item.id = coinName;
               item.count = count;
               item.low = low;
               const unit = 100000000;
