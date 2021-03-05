@@ -14,28 +14,22 @@
 - 选择生成的dist目录文件夹
 
 
-## 打包构建
-
-- 更新package.json和manifest.json里的```version```版本号
-
-```shell
-  npm run build
-```
-
-- 根目录下会生成一个```artifacts```文件夹，里面打包出来zip可用作发布
-
 ## 发布版本
 
 > [文档说明](https://vue-web-extension.netlify.app/intro/production-workflow.html#handle-extension-version)
 
 - 使用npm脚本更新版本号，打包的时候会```manifest.json```文件自动使用```package.json```里的版本号
+
 ```shell
 npm version major # 1.x.x -> 2.x.x, when you release a breaking change
 npm version minor # x.1.x -> x.2.x, when you release a feature
 npm version patch # x.x.1 -> x.x.2, when you release a patch
 npm version 1.2.3 # custom version
 ```
+
 - ```npm run build```
+
+- 根目录下会生成一个```artifacts```文件夹，里面打包出来zip可用作发布
 
 ## 项目模板
 
