@@ -62,6 +62,9 @@ $http.interceptors.request.use(config => {
 
 $http.interceptors.response.use(
   response => {
+    if (response.config.url.indexOf("chrome-extension://") !== -1) {
+      return response.data;
+    }
     return handleSuccess(response.data);
   },
   error => {

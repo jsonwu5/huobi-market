@@ -1,6 +1,15 @@
 <template>
-  <div class="index pl15 pt15 pr15 pb15" :style="indexStyle">
-    <div class="flex ac">
+  <div
+    class="index pl15 pt15 pr15 pb15"
+    :class="isDev ? 'pb30' : 'pb15'"
+    :style="indexStyle"
+  >
+    <a-space>
+      <span class="bold f16">{{ manifest.name }}</span>
+      <span>当前版本:{{ manifest.version }}</span>
+      <span @click="feedback" class="pointer">吐个槽</span>
+    </a-space>
+    <div class="flex ac mt5">
       <a-select
         style="width: 300px;"
         v-model="selectedCoin"
@@ -18,7 +27,7 @@
         >添加自选</a-button
       >
     </div>
-    <div class="flex jfe ac mt15">
+    <div class="flex ac mt15">
       <div class="mr15">
         <a-switch
           checked-children="红涨"
@@ -27,7 +36,7 @@
         />
       </div>
       <a-popover title="自定义列">
-        <template slot="content">
+        <div slot="content" style="width: 200px;">
           <div :style="{ borderBottom: '1px solid #E9E9E9' }">
             <a-checkbox
               :indeterminate="indeterminate"
@@ -47,9 +56,27 @@
               >{{ item.title }}</a-checkbox
             >
           </a-checkbox-group>
-        </template>
+        </div>
         <a-icon class="pointer" type="menu" :style="{ fontSize: '18px' }" />
       </a-popover>
+      <a-tooltip>
+        <template slot="title">
+          清除缓存
+        </template>
+        <a-popconfirm
+          title="清除缓存后会重置为默认自选，是否清除？"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="clearLocalStorage"
+        >
+          <a-icon
+            class="pointer ml10"
+            type="rest"
+            :style="{ fontSize: '18px' }"
+            theme="filled"
+          />
+        </a-popconfirm>
+      </a-tooltip>
     </div>
     <div class="mt5">
       <a-table
@@ -58,23 +85,21 @@
         :dataSource="marketList"
         :rowKey="record => record.id"
         :pagination="false"
-        bordered
       >
         <template slot="ups" slot-scope="value, row">
-          <a-badge
-            :count="`${row.ups > 0 ? '+' + row.ups : row.ups}%`"
-            :show-zero="true"
-            :number-style="{
-              backgroundColor:
-                row.ups > 0
-                  ? upsColor
-                    ? '#ff2e39'
-                    : '#52c41a'
-                  : upsColor
-                  ? '#52c41a'
-                  : '#ff2e39'
-            }"
-          ></a-badge>
+          <a-tag
+            :color="
+              row.ups > 0
+                ? upsColor
+                  ? 'volcano'
+                  : 'green'
+                : upsColor
+                ? 'green'
+                : 'volcano'
+            "
+          >
+            {{ `${row.ups > 0 ? "+" + row.ups : row.ups}%` }}
+          </a-tag>
         </template>
         <div slot="action" slot-scope="value, row">
           <a-tooltip>
@@ -87,6 +112,17 @@
               type="star"
               :style="{ fontSize: '18px' }"
               theme="filled"
+            />
+          </a-tooltip>
+          <a-tooltip>
+            <template slot="title">
+              置顶
+            </template>
+            <a-icon
+              class="pointer ml5"
+              @click="stickOptional(row)"
+              type="vertical-align-top"
+              :style="{ fontSize: '20px' }"
             />
           </a-tooltip>
         </div>
@@ -109,7 +145,8 @@ export default {
   name: "market",
   data() {
     return {
-      upsColor: true, // 涨跌色切换
+      isDev: process.env.NODE_ENV === "development",
+      upsColor: true, // 涨跌色切换 true = 红涨 false = 绿涨
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
       checkAll: false, // 是否全选所有字段
@@ -130,84 +167,94 @@ export default {
           dataIndex: "name",
           width: 50,
           checked: true, // 是否默认勾选
-          checkDisabled: true // 是否默认禁用
+          checkDisabled: true, // 是否默认禁用
+          customRender: val => {
+            return val.toUpperCase();
+          }
         },
         {
           title: "涨跌幅",
-          align: "center",
+          align: "left",
           dataIndex: "ups",
-          width: 100,
           checked: true,
           checkDisabled: false,
-          scopedSlots: { customRender: "ups" }
+          scopedSlots: { customRender: "ups" },
+          sorter: (a, b) => a.ups > b.ups
         },
         {
           title: "最新",
-          align: "center",
+          align: "left",
           dataIndex: "close",
           width: 100,
           checked: true,
           checkDisabled: false,
           customRender: val => {
             return `$${val}`;
-          }
+          },
+          sorter: (a, b) => a.close > b.close
         },
         {
           title: "最低",
-          align: "center",
+          align: "left",
           dataIndex: "low",
           checked: false,
           checkDisabled: false,
           customRender: val => {
             return `$${val}`;
-          }
+          },
+          sorter: (a, b) => a.low > b.low
         },
         {
           title: "最高",
-          align: "center",
+          align: "left",
           dataIndex: "high",
           checked: false,
           checkDisabled: false,
           customRender: val => {
             return `$${val}`;
-          }
+          },
+          sorter: (a, b) => a.high > b.high
         },
         {
           title: "开盘",
-          align: "center",
+          align: "left",
           dataIndex: "open",
           checked: false,
-          checkDisabled: false
+          checkDisabled: false,
+          sorter: (a, b) => a.open > b.open
         },
         {
           title: "成交额",
-          align: "center",
+          align: "left",
           dataIndex: "vol",
           checked: false,
           checkDisabled: false,
           customRender: val => {
             return `￥${val}`;
-          }
+          },
+          sorter: (a, b) => a.vol > b.vol
         },
         {
           title: "成交量",
-          align: "center",
+          align: "left",
           dataIndex: "amount",
           checked: false,
-          checkDisabled: false
+          checkDisabled: false,
+          sorter: (a, b) => a.amount > b.amount
         },
         {
           title: "成交笔数",
-          align: "center",
+          align: "left",
           dataIndex: "count",
           checked: false,
-          checkDisabled: false
+          checkDisabled: false,
+          sorter: (a, b) => a.count > b.count
         },
         {
           title: "操作",
           align: "center",
           dataIndex: "action",
-          width: 50,
+          width: 70,
           scopedSlots: { customRender: "action" },
           checked: true,
           checkDisabled: true
@@ -217,7 +264,7 @@ export default {
   },
   computed: {
     ...mapState({ coins: state => state.coinList }),
-    ...mapState(["tableKeys", "myCoinList"]),
+    ...mapState(["tableKeys", "myCoinList", "stickList", "manifest"]),
     // 选择显示的列
     selectedColumns() {
       const columns = [];
@@ -241,13 +288,16 @@ export default {
     }
   },
   created() {
+    //  TODO 检查是否有新版本
+    // chrome.runtime.requestUpdateCheck(res => {
+    //   console.log(res);
+    // });
     // 先赋值内置的，后面可能有更新的情况 test
     this.columns.forEach(item => {
       if (item.checked) {
         this.checkedList.push(item.dataIndex);
       }
     });
-    // TODO 缓存里的配置覆盖默认的
     // 再从本地缓存获取
     if (this.tableKeys.length) {
       this.tableKeys.forEach(item => {
@@ -262,8 +312,20 @@ export default {
     this.getOptional();
   },
   methods: {
-    ...mapMutations(["_setMyCoinList", "_setTableKeys"]),
+    ...mapMutations(["_setMyCoinList", "_setTableKeys", "_setStickyList"]),
     ...mapActions(["_getCoinList"]),
+    feedback() {
+      chrome.tabs.create(
+        { url: "https://support.qq.com/product/313772" },
+        res => {
+          console.log(res);
+        }
+      );
+    },
+    clearLocalStorage() {
+      localStorage.clear();
+      this.$message.success("清除成功, 下次打开生效");
+    },
     // 自选列表变化
     onChange(checkedList) {
       this.indeterminate =
@@ -294,11 +356,13 @@ export default {
       });
       this.optionalCoins = data;
       this._setMyCoinList(data);
+      this._setStickyList(data);
+      this.selectedCoin = []; // 清空选择框
       this.getOptional();
     },
-    // 从本地获取自选的币种
+    // 从本地缓存获取自选的币种
     getOptional() {
-      // 从本地获取自选的币种
+      // 从本地缓存获取自选的币种
       this.optionalCoins = JSON.parse(JSON.stringify(this.myCoinList));
       // 用户刚安装，没有自选时，使用内置默认的自选
       if (this.optionalCoins.length === 0) {
@@ -306,9 +370,16 @@ export default {
         // 并缓存到本地
         this._setMyCoinList(DEFAULTCOINS);
       }
+      // 用户刚安装
+      if (this.stickList.length === 0) {
+        // 使用默认的并缓存到本地
+        this._setStickyList(DEFAULTCOINS);
+      }
       const marketList = [];
       // 组合成table需要的数据格式
       this.optionalCoins.forEach(item => {
+        // 排序index
+        const index = this.stickList.findIndex(sItem => sItem === item);
         marketList.push({
           name: item,
           amount: 0,
@@ -319,10 +390,14 @@ export default {
           count: 0,
           low: 0,
           vol: 0,
-          ups: 0
+          ups: 0,
+          index
         });
       });
+      // index小的排到前面
+      marketList.sort((a, b) => a.index - b.index);
       this.marketList = marketList;
+
       this.initWebSocket();
     },
     // 取消自选
@@ -338,6 +413,27 @@ export default {
         return false;
       });
       this._setMyCoinList(this.optionalCoins);
+      // 更新排序
+      const list = JSON.parse(JSON.stringify(this.stickList));
+      const mIndex = list.findIndex(item => item === row.name);
+      list.splice(mIndex, 1);
+      this._setStickyList(list);
+    },
+    // 置顶自选
+    stickOptional(row) {
+      let list = JSON.parse(JSON.stringify(this.stickList));
+
+      const index = this.stickList.findIndex(item => item === row.id);
+      // 删除原来的
+      list.splice(index, 1);
+      // 插入到第一位
+      list.splice(0, 0, row.id);
+      // 更新缓存
+      this._setStickyList(list);
+      // 更新排序index值
+      this.marketList.forEach(item => {
+        item.index = list.findIndex(sItem => sItem === item.id);
+      });
     },
     reconnect() {
       console.log("尝试重连");
@@ -413,7 +509,10 @@ export default {
               item.count = count;
               item.low = low;
               const unit = 100000000;
-              item.vol = vol > unit ? parseInt(vol / 100000000) + "亿" : vol;
+              item.vol =
+                vol > 10000
+                  ? NP.round(NP.divide(vol, unit), 2) + "亿"
+                  : NP.round(vol, 2);
               // 计算涨跌百分比
               // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
               item.ups = NP.times(
@@ -424,6 +523,8 @@ export default {
             }
             return false;
           });
+          // index小的排到前面
+          this.marketList.sort((a, b) => a.index - b.index);
         }
       });
     },
@@ -483,11 +584,20 @@ export default {
   }
 };
 </script>
-
+<style lang="less" scoped>
+.index {
+  transition: all 0.3s;
+  min-height: 250px;
+  /deep/ .ant-switch {
+    background-color: #39c38c;
+  }
+  /deep/ .ant-switch-checked {
+    background-color: #ff704b;
+  }
+}
+</style>
 <style lang="less">
 .index {
-  //min-width: 400px;
-  min-height: 250px;
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {
     padding: 5px;

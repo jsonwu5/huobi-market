@@ -16,7 +16,11 @@ export default new Vuex.Store({
     // 我的自选币种列表
     myCoinList: getItem("myCoinList") || [],
     // 行情表格展示的字段
-    tableKeys: getItem("tableKeys") || []
+    tableKeys: getItem("tableKeys") || [],
+    // 置顶自选币种列表
+    stickList: getItem("stickList") || [],
+    // Manifest配置文件
+    manifest: {}
   },
   mutations: {
     _setCoinList(state, val) {
@@ -29,6 +33,13 @@ export default new Vuex.Store({
     _setTableKeys(state, val) {
       state.tableKeys = val;
       localStorage.setItem("tableKeys", JSON.stringify(val));
+    },
+    _setStickyList(state, val) {
+      state.stickList = val;
+      localStorage.setItem("stickList", JSON.stringify(val));
+    },
+    _setManifest(state, val) {
+      state.manifest = val;
     }
   },
   actions: {
@@ -37,6 +48,15 @@ export default new Vuex.Store({
       $http.get("https://api.huobi.pro/v1/common/currencys").then(res => {
         commit("_setCoinList", res);
       });
+    },
+    // 获取当前的manifest.json配置
+    _getManifest({ commit }) {
+      // 通过API
+      commit("_setManifest", chrome.runtime.getManifest());
+      // 通过请求
+      // $http.get(chrome.extension.getURL("manifest.json")).then(res => {
+      //   commit("_setManifest", res);
+      // });
     }
   },
   modules: {}

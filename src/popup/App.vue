@@ -9,6 +9,7 @@
 <script>
 import zhCN from "ant-design-vue/lib/locale-provider/zh_CN";
 import Market from "@/components/market.vue";
+import { mapActions } from "vuex";
 
 export default {
   name: "App",
@@ -17,6 +18,12 @@ export default {
     return {
       zhCN: zhCN
     };
+  },
+  created() {
+    this._getManifest();
+  },
+  methods: {
+    ...mapActions(["_getManifest"])
   }
 };
 </script>
