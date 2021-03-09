@@ -233,7 +233,12 @@ export default {
           dataIndex: "vol",
           checked: false,
           checkDisabled: false,
-          customRender: val => {
+          customRender: vol => {
+            const unit = 100000000;
+            const val =
+              vol > 10000
+                ? NP.round(NP.divide(vol, unit), 2) + "亿"
+                : NP.round(vol, 2);
             return `￥${val}`;
           },
           sorter: (a, b) => a.vol > b.vol
@@ -510,11 +515,7 @@ export default {
               item.id = coinName;
               item.count = count;
               item.low = low;
-              const unit = 100000000;
-              item.vol =
-                vol > 10000
-                  ? NP.round(NP.divide(vol, unit), 2) + "亿"
-                  : NP.round(vol, 2);
+              item.vol = vol;
               // 计算涨跌百分比
               // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
               item.ups = NP.times(
