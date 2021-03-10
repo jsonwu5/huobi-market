@@ -47,11 +47,11 @@ function getMarket(coin, upsColor = true) {
  * @param coin { String } 自选币种
  */
 const setBadge = coin => {
+  if (TIMER) {
+    clearInterval(TIMER);
+    TIMER = null;
+  }
   if (coin) {
-    if (TIMER) {
-      clearInterval(TIMER);
-      TIMER = null;
-    }
     const item = localStorage.getItem("upsColor");
     const upsColor = item === null ? true : item === "true";
     // 立即请求一次
@@ -59,15 +59,17 @@ const setBadge = coin => {
     TIMER = setInterval(() => {
       getMarket(coin, upsColor);
     }, 5000);
+  } else {
+    chrome.browserAction.setBadgeText({
+      text: ""
+    });
   }
 };
 
 const initBadge = () => {
   // console.log("初始化 initBadge");
   const coin = localStorage.getItem("badgeCoin") || "";
-  if (coin) {
-    setBadge(coin);
-  }
+  setBadge(coin);
 };
 
 // 初始化

@@ -40,7 +40,7 @@
       </div>
       <a-popover title="自定义列">
         <div slot="content" style="width: 200px;">
-          <div :style="{ borderBottom: '1px solid #E9E9E9' }">
+          <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
             <a-checkbox
               :indeterminate="indeterminate"
               :checked="checkAll"
@@ -51,13 +51,15 @@
           </div>
           <!-- 自定义列字段列表 -->
           <a-checkbox-group v-model="checkedList" @change="onChange">
-            <a-checkbox
-              v-for="item in columns"
-              :key="item.dataIndex"
-              :value="item.dataIndex"
-              :disabled="item.checkDisabled"
-              >{{ item.title }}</a-checkbox
-            >
+            <a-row>
+              <a-col v-for="item in columns" :key="item.dataIndex" :span="12">
+                <a-checkbox
+                  :value="item.dataIndex"
+                  :disabled="item.checkDisabled"
+                  >{{ item.title }}</a-checkbox
+                >
+              </a-col>
+            </a-row>
           </a-checkbox-group>
         </div>
         <a-icon class="pointer" type="menu" :style="{ fontSize: '18px' }" />
@@ -631,10 +633,10 @@ export default {
           item.badge = false;
         }
         if (item.name === row.name) {
-          item.badge = true;
+          item.badge = val;
         }
       });
-      this._setBadge(row.name);
+      this._setBadge(val ? row.name : "");
       // 通知后台js显示角标
       chrome.runtime.sendMessage({
         type: "refreshBadge"
