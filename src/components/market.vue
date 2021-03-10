@@ -34,7 +34,8 @@
         <a-switch
           checked-children="红涨"
           un-checked-children="绿涨"
-          v-model="upsColor"
+          :checked="upsColor"
+          @change="switchChange"
         />
       </div>
       <a-popover title="自定义列">
@@ -150,7 +151,7 @@ export default {
   data() {
     return {
       isDev: process.env.NODE_ENV === "development",
-      upsColor: true, // 涨跌色切换 true = 红涨 false = 绿涨
+      // upsColor: true, // 涨跌色切换 true = 红涨 false = 绿涨
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
       checkAll: false, // 是否全选所有字段
@@ -273,7 +274,13 @@ export default {
   },
   computed: {
     ...mapState({ coins: state => state.coinList }),
-    ...mapState(["tableKeys", "myCoinList", "stickList", "manifest"]),
+    ...mapState([
+      "tableKeys",
+      "myCoinList",
+      "stickList",
+      "manifest",
+      "upsColor"
+    ]),
     // 选择显示的列
     selectedColumns() {
       const columns = [];
@@ -321,8 +328,16 @@ export default {
     this.getOptional();
   },
   methods: {
-    ...mapMutations(["_setMyCoinList", "_setTableKeys", "_setStickyList"]),
+    ...mapMutations([
+      "_setMyCoinList",
+      "_setTableKeys",
+      "_setStickyList",
+      "_setUpsColor"
+    ]),
     ...mapActions(["_getCoinList"]),
+    switchChange(e) {
+      this._setUpsColor(e);
+    },
     goGithub() {
       chrome.tabs.create({ url: "https://github.com/jsonwu5/huobi-market" });
     },

@@ -46,7 +46,13 @@ export default new Vuex.Store({
     // 币种选择器 币种列表
     coinSelectList: [],
     // 用户配置数据
-    userOptions: getStorageItem("userOptions") || {}
+    userOptions: getStorageItem("userOptions") || {},
+    // 涨跌色切换 true = 红涨 false = 绿涨
+    // 默认是红涨
+    upsColor:
+      localStorage.getItem("upsColor") === null
+        ? true
+        : localStorage.getItem("upsColor") === "true"
   },
   mutations: {
     _setCoinList(state, val) {
@@ -73,6 +79,10 @@ export default new Vuex.Store({
     _setUserOptions(state, val) {
       state.userOptions = val;
       localStorage.setItem("userOptions", JSON.stringify(val));
+    },
+    _setUpsColor(state, val) {
+      state.upsColor = val;
+      localStorage.setItem("upsColor", val);
     }
   },
   actions: {
@@ -96,7 +106,7 @@ export default new Vuex.Store({
      * @param commit
      * @param state
      * @param pageNumber { Number } 页码
-     * @param resultSize { Number } 每天条数
+     * @param resultSize { Number } 每页条数
      * @param coinName { String } 搜索的币种关键字
      * @private
      */
