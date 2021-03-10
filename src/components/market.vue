@@ -338,8 +338,8 @@ export default {
       this.tableKeys.forEach(item => {
         // 去重添加
         if (!this.checkedList.some(cItem => cItem === item)) {
-          // 从倒数第二个位置插入
-          this.checkedList.splice(this.checkedList.length - 2, 0, item);
+          // 从倒数第三个个位置插入 角标和操作 固定在最右边
+          this.checkedList.splice(this.checkedList.length - 3, 0, item);
         }
       });
     }
