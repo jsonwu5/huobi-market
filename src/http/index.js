@@ -8,7 +8,7 @@ const $http = axios.create({
 
 function handleSuccess(data) {
   if (data.status === "ok") {
-    return Promise.resolve(data.data);
+    return Promise.resolve(data);
   } else {
     message.error({
       content: data.message,

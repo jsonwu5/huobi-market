@@ -52,7 +52,9 @@ export default new Vuex.Store({
     upsColor:
       localStorage.getItem("upsColor") === null
         ? true
-        : localStorage.getItem("upsColor") === "true"
+        : localStorage.getItem("upsColor") === "true",
+    // 角标上展示的币种
+    badgeCoin: localStorage.getItem("badgeCoin") || ""
   },
   mutations: {
     _setCoinList(state, val) {
@@ -83,13 +85,17 @@ export default new Vuex.Store({
     _setUpsColor(state, val) {
       state.upsColor = val;
       localStorage.setItem("upsColor", val);
+    },
+    _setBadge(state, val) {
+      state.badgeCoin = val;
+      localStorage.setItem("badgeCoin", val);
     }
   },
   actions: {
     // 获取火币支持的币种
     _getCoinList({ commit }) {
-      $http.get("/common/currencys").then(res => {
-        commit("_setCoinList", res);
+      $http.get("/v1/common/currencys").then(res => {
+        commit("_setCoinList", res.data);
       });
     },
     // 获取当前的manifest.json配置

@@ -92,7 +92,7 @@
         <template slot="ups" slot-scope="value, row">
           <a-tag
             :color="
-              row.ups > 0
+              row.ups >= 0
                 ? upsColor
                   ? 'volcano'
                   : 'green'
@@ -103,6 +103,14 @@
           >
             {{ `${row.ups > 0 ? "+" + row.ups : row.ups}%` }}
           </a-tag>
+        </template>
+        <template slot="badge" slot-scope="badge, row">
+          <a-switch
+            checked-children="开"
+            un-checked-children="关"
+            :checked="badge"
+            @change="badgeChange($event, row)"
+          />
         </template>
         <div slot="action" slot-scope="value, row">
           <a-tooltip>
@@ -261,6 +269,14 @@ export default {
           sorter: (a, b) => a.count > b.count
         },
         {
+          title: "角标",
+          align: "center",
+          dataIndex: "badge",
+          scopedSlots: { customRender: "badge" },
+          checked: true,
+          checkDisabled: true
+        },
+        {
           title: "操作",
           align: "center",
           dataIndex: "action",
@@ -279,7 +295,8 @@ export default {
       "myCoinList",
       "stickList",
       "manifest",
-      "upsColor"
+      "upsColor",
+      "badgeCoin"
     ]),
     // 选择显示的列
     selectedColumns() {
@@ -332,11 +349,15 @@ export default {
       "_setMyCoinList",
       "_setTableKeys",
       "_setStickyList",
-      "_setUpsColor"
+      "_setUpsColor",
+      "_setBadge"
     ]),
     ...mapActions(["_getCoinList"]),
     switchChange(e) {
       this._setUpsColor(e);
+      chrome.runtime.sendMessage({
+        type: "refreshBadge"
+      });
     },
     goGithub() {
       chrome.tabs.create({ url: "https://github.com/jsonwu5/huobi-market" });
@@ -413,7 +434,8 @@ export default {
           low: 0,
           vol: 0,
           ups: 0,
-          index
+          index,
+          badge: this.badgeCoin === item
         });
       });
       // index小的排到前面
@@ -531,6 +553,7 @@ export default {
               item.count = count;
               item.low = low;
               item.vol = vol;
+              item.badge = this.badgeCoin === coinName;
               // 计算涨跌百分比
               // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
               item.ups = NP.times(
@@ -594,6 +617,28 @@ export default {
         // console.log("ArrayBuffer转字符串", msg);
         callback && callback(JSON.parse(msg));
       };
+    },
+    /**
+     * 角标显示的币种更新
+     * @param val
+     * @param row
+     */
+    badgeChange(val, row) {
+      // console.log(val, row);
+      this.marketList.forEach(item => {
+        // 关闭其他的
+        if (item.badge === true) {
+          item.badge = false;
+        }
+        if (item.name === row.name) {
+          item.badge = true;
+        }
+      });
+      this._setBadge(row.name);
+      // 通知后台js显示角标
+      chrome.runtime.sendMessage({
+        type: "refreshBadge"
+      });
     }
   },
   // 页面注销，关闭websocket

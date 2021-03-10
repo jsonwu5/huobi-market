@@ -48,3 +48,23 @@ export function deBonce(fn, timeout) {
   // 2.以最后一次触发 为准
   deBonce.timeID = setTimeout(fn, timeout);
 }
+
+export function formatNum(val) {
+  let num = parseFloat(val);
+  let absNum = Math.abs(num);
+  if (absNum < 10) {
+    return num.toFixed(2);
+  } else if (absNum < 100) {
+    return num.toFixed(1);
+  } else if (absNum < 1000) {
+    return num.toFixed(0);
+  } else if (absNum < 10000) {
+    return (num / 1000).toFixed(1) + "k";
+  } else if (absNum < 1000000) {
+    return Math.floor(num / 1000) + "k";
+  } else if (absNum < 10000000) {
+    return (num / 1000000).toFixed(1) + "m";
+  } else {
+    return Math.floor(num / 1000000) + "m";
+  }
+}
