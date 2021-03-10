@@ -30,7 +30,7 @@
       >
     </div>
     <div class="flex ac mt15">
-      <div class="mr15">
+      <div class="mr20">
         <a-switch
           checked-children="红涨"
           un-checked-children="绿涨"
@@ -38,7 +38,25 @@
           @change="switchChange"
         />
       </div>
-      <a-popover title="自定义列">
+      <a-tooltip>
+        <template slot="title">
+          清除缓存
+        </template>
+        <a-popconfirm
+          title="清除缓存后会重置为默认自选，是否清除？"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="clearLocalStorage"
+        >
+          <a-icon
+            class="pointer mr20"
+            type="rest"
+            :style="{ fontSize: '18px' }"
+            theme="filled"
+          />
+        </a-popconfirm>
+      </a-tooltip>
+      <a-popover title="自定义列" trigger="click">
         <div slot="content" style="width: 200px;">
           <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
             <a-checkbox
@@ -64,24 +82,6 @@
         </div>
         <a-icon class="pointer" type="menu" :style="{ fontSize: '18px' }" />
       </a-popover>
-      <a-tooltip>
-        <template slot="title">
-          清除缓存
-        </template>
-        <a-popconfirm
-          title="清除缓存后会重置为默认自选，是否清除？"
-          ok-text="确认"
-          cancel-text="取消"
-          @confirm="clearLocalStorage"
-        >
-          <a-icon
-            class="pointer ml10"
-            type="rest"
-            :style="{ fontSize: '18px' }"
-            theme="filled"
-          />
-        </a-popconfirm>
-      </a-tooltip>
     </div>
     <div class="mt15">
       <a-table
@@ -180,7 +180,7 @@ export default {
           title: "Coin",
           align: "center",
           dataIndex: "name",
-          width: 50,
+          width: 40,
           checked: true, // 是否默认勾选
           checkDisabled: true, // 是否默认禁用
           customRender: val => {
@@ -191,6 +191,8 @@ export default {
           title: "涨跌幅",
           align: "left",
           dataIndex: "ups",
+          // width: 80,
+          ellipsis: false,
           checked: true,
           checkDisabled: false,
           scopedSlots: { customRender: "ups" },
@@ -200,7 +202,7 @@ export default {
           title: "最新",
           align: "left",
           dataIndex: "close",
-          width: 100,
+          width: 80,
           checked: true,
           checkDisabled: false,
           customRender: val => {
@@ -212,6 +214,7 @@ export default {
           title: "最低",
           align: "left",
           dataIndex: "low",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           customRender: val => {
@@ -223,6 +226,7 @@ export default {
           title: "最高",
           align: "left",
           dataIndex: "high",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           customRender: val => {
@@ -234,6 +238,7 @@ export default {
           title: "开盘",
           align: "left",
           dataIndex: "open",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           sorter: (a, b) => a.open > b.open
@@ -242,6 +247,7 @@ export default {
           title: "成交额",
           align: "left",
           dataIndex: "vol",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           customRender: vol => {
@@ -258,6 +264,7 @@ export default {
           title: "成交量",
           align: "left",
           dataIndex: "amount",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           sorter: (a, b) => a.amount > b.amount
@@ -266,6 +273,7 @@ export default {
           title: "成交笔数",
           align: "left",
           dataIndex: "count",
+          ellipsis: true,
           checked: false,
           checkDisabled: false,
           sorter: (a, b) => a.count > b.count
@@ -282,7 +290,7 @@ export default {
           title: "操作",
           align: "center",
           dataIndex: "action",
-          width: 70,
+          width: 60,
           scopedSlots: { customRender: "action" },
           checked: true,
           checkDisabled: true
@@ -318,7 +326,7 @@ export default {
       const len = this.selectedColumns.length;
       return {
         // 根据表格字段动态设置页面的width
-        width: `${len > 4 ? len * 80 : 400}px`
+        width: `${len > 4 ? (len * 100 > 800 ? 800 : len * 100) : 400}px`
       };
     }
   },
