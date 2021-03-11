@@ -472,6 +472,14 @@ export default {
       const mIndex = list.findIndex(item => item === row.name);
       list.splice(mIndex, 1);
       this._setStickyList(list);
+      // 如果设置了角标，则停止角标提醒
+      if (row.badge === true) {
+        this._setBadge("");
+        // 通知后台js显示角标
+        chrome.runtime.sendMessage({
+          type: "refreshBadge"
+        });
+      }
     },
     // 置顶自选
     stickOptional(row) {

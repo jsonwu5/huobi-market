@@ -5,6 +5,7 @@ let TIMER = null;
 
 chrome.runtime.onMessage.addListener(request => {
   // console.log(request, sender, sendResponse);
+  // 刷新角标提醒
   if (request.type === "refreshBadge") {
     initBadge();
   }
@@ -60,6 +61,7 @@ const setBadge = coin => {
       getMarket(coin, upsColor);
     }, 5000);
   } else {
+    // 不显示角标
     chrome.browserAction.setBadgeText({
       text: ""
     });
