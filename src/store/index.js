@@ -54,7 +54,9 @@ export default new Vuex.Store({
         ? true
         : localStorage.getItem("upsColor") === "true",
     // 角标上展示的币种
-    badgeCoin: localStorage.getItem("badgeCoin") || ""
+    badgeCoin: localStorage.getItem("badgeCoin") || "",
+    // 上次排序的配置
+    sortConfig: getStorageItem("sortConfig") || {}
   },
   mutations: {
     _setCoinList(state, val) {
@@ -89,6 +91,10 @@ export default new Vuex.Store({
     _setBadge(state, val) {
       state.badgeCoin = val;
       localStorage.setItem("badgeCoin", val);
+    },
+    _setSortConfig(state, val) {
+      state.sortConfig = val;
+      localStorage.setItem("sortConfig", JSON.stringify(val));
     }
   },
   actions: {

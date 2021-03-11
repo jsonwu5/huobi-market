@@ -90,6 +90,7 @@
         :dataSource="marketList"
         :rowKey="record => record.id"
         :pagination="false"
+        @change="onTableChange"
       >
         <template slot="ups" slot-scope="value, row">
           <a-tag
@@ -161,7 +162,6 @@ export default {
   data() {
     return {
       isDev: process.env.NODE_ENV === "development",
-      // upsColor: true, // 涨跌色切换 true = 红涨 false = 绿涨
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
       checkAll: false, // 是否全选所有字段
@@ -306,7 +306,8 @@ export default {
       "stickList",
       "manifest",
       "upsColor",
-      "badgeCoin"
+      "badgeCoin",
+      "sortConfig"
     ]),
     // 选择显示的列
     selectedColumns() {
@@ -351,6 +352,19 @@ export default {
         }
       });
     }
+    // 初始化时默认使用上次的排序
+    // 从本地缓存里获取上次排序的columns dataIndex字段
+    const { order, columnKey } = this.sortConfig;
+    if (order) {
+      this.columns.some(item => {
+        if (item.dataIndex === columnKey) {
+          // 设置为默认排序
+          item.defaultSortOrder = order;
+          return true;
+        }
+        return false;
+      });
+    }
     this._getCoinList();
     this.getOptional();
   },
@@ -360,9 +374,23 @@ export default {
       "_setTableKeys",
       "_setStickyList",
       "_setUpsColor",
-      "_setBadge"
+      "_setBadge",
+      "_setSortConfig"
     ]),
     ...mapActions(["_getCoinList"]),
+    // 表格排序变化等
+    onTableChange(pagination, filters, sorter) {
+      const { order, columnKey } = sorter;
+      // console.log(order, columnKey);
+      if (order) {
+        this._setSortConfig({
+          order,
+          columnKey
+        });
+      } else {
+        this._setSortConfig({});
+      }
+    },
     switchChange(e) {
       this._setUpsColor(e);
       chrome.runtime.sendMessage({
