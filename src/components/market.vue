@@ -544,16 +544,16 @@ export default {
         } else {
           console.log("您的浏览器不支持websocket");
         }
-        this.socket.onopen = this.websocketonopen;
-        this.socket.onerror = this.websocketonerror;
-        this.socket.onmessage = this.websocketonmessage;
-        this.socket.onclose = this.websocketclose;
+        this.socket.onopen = this.websocketOnOpen;
+        this.socket.onerror = this.websocketOnError;
+        this.socket.onmessage = this.websocketOnMessage;
+        this.socket.onclose = this.websocketClose;
       } catch (e) {
         this.loading = false;
         this.reconnect();
       }
     },
-    websocketonopen() {
+    websocketOnOpen() {
       this.loading = false;
       console.log("WebSocket连接成功", this.socket.readyState);
       // 循环订阅每个币种的主题消息d
@@ -563,12 +563,12 @@ export default {
         });
       }
     },
-    websocketonerror(e) {
+    websocketOnError(e) {
       console.log("WebSocket连接发生错误：", e);
       this.reconnect();
     },
     // 接收数据并处理
-    websocketonmessage(e) {
+    websocketOnMessage(e) {
       this.blob2json(e.data, res => {
         // console.log("接收到的数据：", res);
         if (res.ping) {
@@ -615,7 +615,7 @@ export default {
         }
       });
     },
-    websocketclose(e) {
+    websocketClose(e) {
       console.log("connection closed:", e);
       this.reconnect();
     },
