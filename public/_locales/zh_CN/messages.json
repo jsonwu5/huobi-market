@@ -1,6 +1,122 @@
 {
   "extName": {
-    "message": "Huobi market",
-    "description": ""
+    "message": "火币行情助手",
+    "description": "Extension name"
+  },
+  "extDes": {
+    "message": "一款开源的火币市场行情助手浏览器扩展程序",
+    "description": "Extension description"
+  },
+  "extDefTitle": {
+    "message": "火币行情助手",
+    "description": "Default title"
+  },
+  "extVersion": {
+    "message": "当前版本",
+    "description": "Current version"
+  },
+  "sourceCode": {
+    "message": "源代码",
+    "description": "Source Code"
+  },
+  "selectCoin": {
+    "message": "请选择币种",
+    "description": "Please select a coin"
+  },
+  "addOptional": {
+    "message": "添加自选",
+    "description": "Add the optional"
+  },
+  "upsColorRed": {
+    "message": "红涨",
+    "description": "The color of increase is red"
+  },
+  "upsColorGreen": {
+    "message": "绿涨",
+    "description": "The color of increase is green"
+  },
+  "clearCache": {
+    "message": "清除缓存",
+    "description": "Clear cache"
+  },
+  "clearCacheWarn": {
+    "message": "清除缓存后会重置为默认自选，是否清除？",
+    "description": "After clearing the cache, it will reset to default optional. Do you want to clear it?"
+  },
+  "affirm": {
+    "message": "确认",
+    "description": "affirm"
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "cancel"
+  },
+  "customColumn": {
+    "message": "自定义列",
+    "description": "The custom column"
+  },
+  "checkAll": {
+    "message": "全选",
+    "description": "Check all"
+  },
+  "switchOn": {
+    "message": "开",
+    "description": "on"
+  },
+  "switchOff": {
+    "message": "关",
+    "description": "off"
+  },
+  "cancelOptional": {
+    "message": "取消自选",
+    "description": "Cancel the optional"
+  },
+  "stick": {
+    "message": "置顶",
+    "description": "Stick"
+  },
+  "colCoin": {
+    "message": "币种",
+    "description": "The name of the Bitcoin type field for the custom column in the table"
+  },
+  "colUps": {
+    "message": "涨跌幅",
+    "description": "The name of the rise and fall field for the custom column in the table"
+  },
+  "colClose": {
+    "message": "最新",
+    "description": "The name of the latest price field for the custom column in the table"
+  },
+  "colLow": {
+    "message": "最低",
+    "description": "The name of the lowest price field for the custom column in the table"
+  },
+  "colHigh": {
+    "message": "最高",
+    "description": "The name of the highest price field for the custom column in the table"
+  },
+  "colOpen": {
+    "message": "开盘",
+    "description": "The name of the opening price field for the custom column in the table"
+  },
+  "colVol": {
+    "message": "成交额",
+    "description": "The name of the turnover field for the custom column in the table"
+  },
+  "colAmount": {
+    "message": "成交量",
+    "description": "The name of the volume field for the custom column in the table"
+  },
+  "colCount": {
+    "message": "成交笔数",
+    "description": "The name of the transaction pen numeric segment for the custom column in the table"
+  },
+  "colBadge": {
+    "message": "角标",
+    "description": "The name of the subscript field for the custom column in the table"
+  },
+  "colOperation": {
+    "message": "操作",
+    "description": "The name of the action field for the custom column in the table"
   }
 }

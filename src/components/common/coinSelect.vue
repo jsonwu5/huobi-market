@@ -1,6 +1,6 @@
 <template>
   <a-select
-    placeholder="请选择币种"
+    :placeholder="i18n.selectCoin || '请选择币种'"
     style="width: 300px"
     show-search
     allowClear
@@ -39,7 +39,7 @@
 
 <script>
 import { deBonce } from "@tools";
-import { mapActions, mapState } from "vuex";
+import { mapActions, mapGetters, mapState } from "vuex";
 
 export default {
   name: "coinSelect",
@@ -72,7 +72,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(["coinSelectList"])
+    ...mapState(["coinSelectList"]),
+    ...mapGetters(["i18n"])
   },
   watch: {
     coin: {

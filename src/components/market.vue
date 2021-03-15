@@ -5,8 +5,8 @@
     :style="indexStyle"
   >
     <a-space>
-      <span class="bold f16">{{ manifest.name }}</span>
-      <span>当前版本:{{ manifest.version }}</span>
+      <span class="bold f16">{{ i18n.extName || "火币行情助手" }}</span>
+      <span>{{ i18n.extVersion || "当前版本" }}:{{ manifest.version }}</span>
       <span v-if="false" @click="feedback" class="pointer">吐个槽</span>
       <a-button class="githubBtn flex ac" @click="goGithub()">
         <svg
@@ -20,32 +20,45 @@
           <path
             d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
           /></svg
-        ><span class="ml5">源代码</span></a-button
+        ><span class="ml5">{{ i18n.sourceCode || "源代码" }}</span></a-button
       >
     </a-space>
     <div class="flex ac mt5">
       <coin-select v-if="coins.length" :coin.sync="selectedCoin"></coin-select>
-      <a-button class="ml10" @click="addOptional(selectedCoin)"
-        >添加自选</a-button
-      >
+      <a-button class="ml10" @click="addOptional(selectedCoin)">{{
+        i18n.addOptional || "添加自选"
+      }}</a-button>
     </div>
     <div class="flex ac mt15">
       <div class="mr20">
+        <a-select :value="userLang" style="width: 120px" @change="langChange">
+          <a-select-option
+            v-for="item in langList"
+            :value="item.lang"
+            :key="item.lang"
+          >
+            {{ item.name }}
+          </a-select-option>
+        </a-select>
+      </div>
+      <div class="mr20">
         <a-switch
-          checked-children="红涨"
-          un-checked-children="绿涨"
+          :checked-children="i18n.upsColorRed || '红涨'"
+          :un-checked-children="i18n.upsColorRed || '绿涨'"
           :checked="upsColor"
           @change="switchChange"
         />
       </div>
       <a-tooltip>
         <template slot="title">
-          清除缓存
+          {{ i18n.clearCache || "清除缓存" }}
         </template>
         <a-popconfirm
-          title="清除缓存后会重置为默认自选，是否清除？"
-          ok-text="确认"
-          cancel-text="取消"
+          :title="
+            i18n.clearCacheWarn || '清除缓存后会重置为默认自选，是否清除？'
+          "
+          :ok-text="i18n.affirm || '确认'"
+          :cancel-text="i18n.cancel || '取消'"
           @confirm="clearLocalStorage"
         >
           <a-icon
@@ -56,7 +69,7 @@
           />
         </a-popconfirm>
       </a-tooltip>
-      <a-popover title="自定义列" trigger="click">
+      <a-popover :title="i18n.customColumn || '自定义列'" trigger="click">
         <div slot="content" style="width: 200px;">
           <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
             <a-checkbox
@@ -64,7 +77,7 @@
               :checked="checkAll"
               @change="onCheckAllChange"
             >
-              全选
+              {{ i18n.checkAll || "全选" }}
             </a-checkbox>
           </div>
           <!-- 自定义列字段列表 -->
@@ -109,8 +122,8 @@
         </template>
         <template slot="badge" slot-scope="badge, row">
           <a-switch
-            checked-children="开"
-            un-checked-children="关"
+            :checked-children="i18n.switchOn || '开'"
+            :un-checked-children="i18n.switchOff || '关'"
             :checked="badge"
             @change="badgeChange($event, row)"
           />
@@ -118,7 +131,7 @@
         <div slot="action" slot-scope="value, row">
           <a-tooltip>
             <template slot="title">
-              取消自选
+              {{ i18n.cancelOptional || "取消自选" }}
             </template>
             <a-icon
               class="pointer"
@@ -130,7 +143,7 @@
           </a-tooltip>
           <a-tooltip>
             <template slot="title">
-              置顶
+              {{ i18n.stick || "置顶" }}
             </template>
             <a-icon
               class="pointer ml5"
@@ -148,8 +161,9 @@
 <script>
 import pako from "pako";
 import NP from "number-precision";
-import { mapActions, mapMutations, mapState } from "vuex";
+import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 import CoinSelect from "@components/common/coinSelect";
+import { formatNum } from "@/tools";
 
 // 当用户的自选为空时，使用内置默认的自选
 const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
@@ -161,6 +175,17 @@ export default {
   components: { CoinSelect },
   data() {
     return {
+      langList: [
+        {
+          name: "中文",
+          lang: "zh_CN"
+        },
+        {
+          name: "English",
+          lang: "en"
+        }
+      ],
+
       isDev: process.env.NODE_ENV === "development",
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
@@ -175,7 +200,7 @@ export default {
 
       optionalCoins: [], // 当前自选的币种列表（包含本地缓存）
       marketList: [], // 自选的币种行情数据
-      columns: [
+      defColumns: [
         {
           title: "Coin",
           align: "center",
@@ -185,7 +210,8 @@ export default {
           checkDisabled: true, // 是否默认禁用
           customRender: val => {
             return val.toUpperCase();
-          }
+          },
+          i18nKey: "colCoin"
         },
         {
           title: "涨跌幅",
@@ -196,7 +222,8 @@ export default {
           checked: true,
           checkDisabled: false,
           scopedSlots: { customRender: "ups" },
-          sorter: (a, b) => a.ups > b.ups
+          sorter: (a, b) => a.ups > b.ups,
+          i18nKey: "colUps"
         },
         {
           title: "最新",
@@ -208,7 +235,8 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.close > b.close
+          sorter: (a, b) => a.close > b.close,
+          i18nKey: "colClose"
         },
         {
           title: "最低",
@@ -220,7 +248,8 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.low > b.low
+          sorter: (a, b) => a.low > b.low,
+          i18nKey: "colLow"
         },
         {
           title: "最高",
@@ -232,7 +261,8 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.high > b.high
+          sorter: (a, b) => a.high > b.high,
+          i18nKey: "colHigh"
         },
         {
           title: "开盘",
@@ -241,7 +271,8 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.open > b.open
+          sorter: (a, b) => a.open > b.open,
+          i18nKey: "colOpen"
         },
         {
           title: "成交额",
@@ -258,7 +289,8 @@ export default {
                 : NP.round(vol, 2);
             return `￥${val}`;
           },
-          sorter: (a, b) => a.vol > b.vol
+          sorter: (a, b) => a.vol > b.vol,
+          i18nKey: "colVol"
         },
         {
           title: "成交量",
@@ -267,7 +299,8 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.amount > b.amount
+          sorter: (a, b) => a.amount > b.amount,
+          i18nKey: "colAmount"
         },
         {
           title: "成交笔数",
@@ -276,7 +309,8 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.count > b.count
+          sorter: (a, b) => a.count > b.count,
+          i18nKey: "colCount"
         },
         {
           title: "角标",
@@ -284,16 +318,19 @@ export default {
           dataIndex: "badge",
           scopedSlots: { customRender: "badge" },
           checked: true,
-          checkDisabled: true
+          checkDisabled: true,
+          i18nKey: "colBadge"
         },
         {
           title: "操作",
           align: "center",
           dataIndex: "action",
-          width: 60,
+          ellipsis: true,
+          // width: 60,
           scopedSlots: { customRender: "action" },
           checked: true,
-          checkDisabled: true
+          checkDisabled: true,
+          i18nKey: "colOperation"
         }
       ]
     };
@@ -307,8 +344,18 @@ export default {
       "manifest",
       "upsColor",
       "badgeCoin",
-      "sortConfig"
+      "sortConfig",
+      "userLang"
     ]),
+    ...mapGetters(["i18n"]),
+    columns() {
+      const columns = [];
+      this.defColumns.forEach(item => {
+        item.title = this.i18n[item.i18nKey];
+        columns.push(item);
+      });
+      return columns;
+    },
     // 选择显示的列
     selectedColumns() {
       const columns = [];
@@ -375,9 +422,15 @@ export default {
       "_setStickyList",
       "_setUpsColor",
       "_setBadge",
-      "_setSortConfig"
+      "_setSortConfig",
+      "_setUserLang"
     ]),
-    ...mapActions(["_getCoinList"]),
+    ...mapActions(["_getCoinList", "_getLanguageAll"]),
+    // 切换语言
+    langChange(val) {
+      this._setUserLang(val);
+      this._getLanguageAll();
+    },
     // 表格排序变化等
     onTableChange(pagination, filters, sorter) {
       const { order, columnKey } = sorter;
@@ -591,12 +644,12 @@ export default {
                 low,
                 vol
               } = res.tick;
-              item.amount = parseInt(amount);
+              item.amount = formatNum(amount);
               item.open = open;
               item.close = close;
               item.high = high;
               item.id = coinName;
-              item.count = count;
+              item.count = formatNum(count);
               item.low = low;
               item.vol = vol;
               item.badge = this.badgeCoin === coinName;

@@ -1,35 +1,9 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import $http from "@/http";
+import { getStorageItem, searchByKeyword } from "@/tools";
 
 Vue.use(Vuex);
-
-/**
- * 获取本地缓存
- * @param key { String }
- * @returns {any|undefined}
- */
-function getStorageItem(key) {
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : undefined;
-}
-
-/*
- * 根据关键字搜索
- * @param list { Array } 原数组
- * @param keyWord { String } 查询的关键词
- * @returns {[]} 匹配的结果
- */
-function searchByKeyword(list, keyWord) {
-  const reg = new RegExp(keyWord);
-  const arr = [];
-  for (let i = 0; i < list.length; i++) {
-    if (reg.test(list[i])) {
-      arr.push(list[i]);
-    }
-  }
-  return arr;
-}
 
 export default new Vuex.Store({
   state: {
@@ -56,7 +30,21 @@ export default new Vuex.Store({
     // 角标上展示的币种
     badgeCoin: localStorage.getItem("badgeCoin") || "",
     // 上次排序的配置
-    sortConfig: getStorageItem("sortConfig") || {}
+    sortConfig: getStorageItem("sortConfig") || {},
+    // 国际化翻译配置
+    i18nList: {},
+    // 用户设置的语言
+    userLang: localStorage.getItem("userLang") || ""
+  },
+  getters: {
+    i18n: state => {
+      const keys = Object.keys(state.i18nList);
+      const list = {};
+      keys.forEach(item => {
+        list[item] = state.i18nList[item].message;
+      });
+      return list;
+    }
   },
   mutations: {
     _setCoinList(state, val) {
@@ -95,6 +83,13 @@ export default new Vuex.Store({
     _setSortConfig(state, val) {
       state.sortConfig = val;
       localStorage.setItem("sortConfig", JSON.stringify(val));
+    },
+    _setI18nList(state, val) {
+      state.i18nList = val;
+    },
+    _setUserLang(state, val) {
+      state.userLang = val;
+      localStorage.setItem("userLang", val);
     }
   },
   actions: {
@@ -102,6 +97,31 @@ export default new Vuex.Store({
     _getCoinList({ commit }) {
       $http.get("/v1/common/currencys").then(res => {
         commit("_setCoinList", res.data);
+      });
+    },
+    /**
+     * 获取国际化翻译配置文件
+     * @param commit
+     * @param lang { String } 用户的浏览器当前语言环境 en/zh_CN等
+     * @returns {Promise<unknown>}
+     * @private
+     */
+    _getLanguageAll({ commit, state }) {
+      // 请求本地语言配置文件
+      function getLocales(userLang, callback) {
+        $http
+          .get(chrome.extension.getURL(`_locales/${userLang}/messages.json`))
+          .then(res => {
+            commit("_setI18nList", res);
+          })
+          .catch(callback);
+      }
+
+      getLocales(state.userLang, () => {
+        // 没有获取到指定的语言配置文件时，重新请求默认中文语言的配置文件
+        getLocales("zh_CN");
+        // 更新设置
+        commit("_setUserLang", "zh_CN");
       });
     },
     // 获取当前的manifest.json配置

@@ -1,6 +1,122 @@
 {
   "extName": {
     "message": "Huobi market",
-    "description": ""
+    "description": "Extension name"
+  },
+  "extDes": {
+    "message": "An open source fire currency market assistant browser extension",
+    "description": "Extension description"
+  },
+  "extDefTitle": {
+    "message": "Huobi market",
+    "description": "Default title"
+  },
+  "extVersion": {
+    "message": "version",
+    "description": "Current version"
+  },
+  "sourceCode": {
+    "message": "Source Code",
+    "description": "Source Code"
+  },
+  "selectCoin": {
+    "message": "Please select a coin",
+    "description": "Please select a coin"
+  },
+  "addOptional": {
+    "message": "Add Optional",
+    "description": "Add the optional"
+  },
+  "upsColorRed": {
+    "message": "Red rose",
+    "description": "The color of increase is red"
+  },
+  "upsColorGreen": {
+    "message": "Green rose",
+    "description": "The color of increase is green"
+  },
+  "clearCache": {
+    "message": "Clear cache",
+    "description": "Clear cache"
+  },
+  "clearCacheWarn": {
+    "message": "After clearing the cache, it will reset to default optional. Do you want to clear it?",
+    "description": "After clearing the cache, it will reset to default optional. Do you want to clear it?"
+  },
+  "affirm": {
+    "message": "Affirm",
+    "description": "affirm"
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "cancel"
+  },
+  "customColumn": {
+    "message": "Custom column",
+    "description": "The custom column"
+  },
+  "checkAll": {
+    "message": "Check all",
+    "description": "Check all"
+  },
+  "switchOn": {
+    "message": "On",
+    "description": "on"
+  },
+  "switchOff": {
+    "message": "Off",
+    "description": "off"
+  },
+  "cancelOptional": {
+    "message": "Cancel optional",
+    "description": "Cancel the optional"
+  },
+  "stick": {
+    "message": "Stick",
+    "description": "Stick"
+  },
+  "colCoin": {
+    "message": "Coin",
+    "description": "The name of the Bitcoin type field for the custom column in the table"
+  },
+  "colUps": {
+    "message": "Ups",
+    "description": "The name of the rise and fall field for the custom column in the table"
+  },
+  "colClose": {
+    "message": "Close",
+    "description": "The name of the latest price field for the custom column in the table"
+  },
+  "colLow": {
+    "message": "Low",
+    "description": "The name of the lowest price field for the custom column in the table"
+  },
+  "colHigh": {
+    "message": "High",
+    "description": "The name of the highest price field for the custom column in the table"
+  },
+  "colOpen": {
+    "message": "Open",
+    "description": "The name of the opening price field for the custom column in the table"
+  },
+  "colVol": {
+    "message": "Vol",
+    "description": "The name of the turnover field for the custom column in the table"
+  },
+  "colAmount": {
+    "message": "Amount",
+    "description": "The name of the volume field for the custom column in the table"
+  },
+  "colCount": {
+    "message": "Count",
+    "description": "The name of the transaction pen numeric segment for the custom column in the table"
+  },
+  "colBadge": {
+    "message": "Badge",
+    "description": "The name of the subscript field for the custom column in the table"
+  },
+  "colOperation": {
+    "message": "Operation",
+    "description": "The name of the action field for the custom column in the table"
   }
 }

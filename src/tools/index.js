@@ -68,3 +68,30 @@ export function formatNum(val) {
     return Math.floor(num / 1000000) + "m";
   }
 }
+
+/**
+ * 获取本地缓存
+ * @param key { String }
+ * @returns {any|undefined}
+ */
+export function getStorageItem(key) {
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : undefined;
+}
+
+/*
+ * 根据关键字搜索
+ * @param list { Array } 原数组
+ * @param keyWord { String } 查询的关键词
+ * @returns {[]} 匹配的结果
+ */
+export function searchByKeyword(list, keyWord) {
+  const reg = new RegExp(keyWord);
+  const arr = [];
+  for (let i = 0; i < list.length; i++) {
+    if (reg.test(list[i])) {
+      arr.push(list[i]);
+    }
+  }
+  return arr;
+}
