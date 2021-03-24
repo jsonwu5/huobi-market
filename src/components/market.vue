@@ -174,7 +174,7 @@
 import pako from "pako";
 import NP from "number-precision";
 import CoinSelect from "@components/common/coinSelect";
-import { formatNum, deBonce } from "@/tools";
+import { formatNum, deBonce, throttle } from "@/tools";
 import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 
 // 当用户的自选为空时，使用内置默认的自选
@@ -268,6 +268,7 @@ export default {
         }
       ],
 
+      dataPool: {}, // 数据缓冲池
       isDev: process.env.NODE_ENV === "development",
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
@@ -747,46 +748,71 @@ export default {
         if (res.ch) {
           // 解析币种
           const coinName = res.ch.split(".")[1].split("usdt")[0];
-          // 更新数据
-          this.marketList.some(item => {
-            if (item.name === coinName) {
-              const {
-                amount,
-                open,
-                close,
-                high,
-                // id,
-                count,
-                low,
-                vol
-              } = res.tick;
-              item.amount = formatNum(amount);
-              item.open = open;
-              item.close = close;
-              item.high = high;
-              item.id = coinName;
-              item.count = formatNum(count);
-              item.low = low;
-              item.vol = vol;
-              item.badge = this.badgeCoin === coinName;
-              // 计算涨跌百分比
-              // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
-              item.ups = NP.times(
-                NP.round(NP.divide(NP.minus(close, open), open), 4),
-                100
-              );
-              return true;
-            }
-            return false;
-          });
-          // index小的排到前面
-          this.marketList.sort((a, b) => a.index - b.index);
+          // 数据缓存到池子中
+          this.dataPool[coinName] = res;
+          // 初始化时立即更新一次
+          const coinItem = this.marketList.filter(
+            item => item.name === coinName
+          )[0];
+          if (!coinItem.close) {
+            // console.log("初始化更新", coinName);
+            this.updateTableData(res, coinName);
+          }
+          // 节流 限制1000ms内统一批量更新一次。
+          throttle(() => {
+            // console.log("批量更新数据");
+            Object.keys(this.dataPool).forEach(item => {
+              this.updateTableData(this.dataPool[item], item);
+            });
+          }, 1000);
         }
       });
     },
     websocketClose(e) {
       console.log("connection closed:", e);
       this.reconnect();
+    },
+    /**
+     * 更新表格数据
+     * @param res { Object } 币种的更新数据包
+     * @param coinName { String } 币种名称
+     **/
+    updateTableData(res, coinName) {
+      // console.log(res, coinName);
+      // 更新数据
+      this.marketList.some(item => {
+        if (item.name === coinName) {
+          const {
+            amount,
+            open,
+            close,
+            high,
+            // id,
+            count,
+            low,
+            vol
+          } = res.tick;
+          item.amount = formatNum(amount);
+          item.open = open;
+          item.close = close;
+          item.high = high;
+          item.id = coinName;
+          item.count = formatNum(count);
+          item.low = low;
+          item.vol = vol;
+          item.badge = this.badgeCoin === coinName;
+          // 计算涨跌百分比
+          // 最新价 - 开盘价 / 开盘价 = 涨跌百分比
+          item.ups = NP.times(
+            NP.round(NP.divide(NP.minus(close, open), open), 4),
+            100
+          );
+          return true;
+        }
+        return false;
+      });
+      // index小的排到前面
+      this.marketList.sort((a, b) => a.index - b.index);
     },
     /**
      * 订阅指定币最近24小时的行情概要数据
