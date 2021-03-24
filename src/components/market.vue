@@ -184,14 +184,14 @@ const DEFAULTWIDTHS = [
   { dataIndex: "name", width: 50 },
   { dataIndex: "ups", width: 80 },
   { dataIndex: "close", width: 80 },
-  { dataIndex: "low", width: 60 },
-  { dataIndex: "high", width: 60 },
-  { dataIndex: "open", width: 60 },
-  { dataIndex: "vol", width: 60 },
+  { dataIndex: "low", width: 80 },
+  { dataIndex: "high", width: 80 },
+  { dataIndex: "open", width: 80 },
+  { dataIndex: "vol", width: 80 },
   { dataIndex: "amount", width: 50 },
   { dataIndex: "count", width: 50 },
   { dataIndex: "badge", width: 80 },
-  { dataIndex: "action", width: 60 }
+  { dataIndex: "action", width: 80 }
 ];
 
 NP.enableBoundaryChecking(false);
@@ -452,13 +452,21 @@ export default {
       return columns;
     },
     indexStyle() {
-      const num = this.selectedColumns.reduce((prev, cur) => {
+      const arr = [];
+      DEFAULTWIDTHS.forEach(item => {
+        if (this.selectedColumns.some(i => i.dataIndex === item.dataIndex)) {
+          arr.push(item);
+        }
+      });
+      let num = arr.reduce((prev, cur) => {
         return cur.width + prev;
       }, 0);
+      num = num + 30; // +30 是把左右内边距算进去
+      num = num > 800 ? 800 : num;
+      num = num < 420 ? 420 : num;
       return {
         // 根据表格字段动态设置页面的width
-        // +30 是把左右内边距算进去
-        width: `${num + 30}px`
+        width: `${num}px`
       };
     }
   },
@@ -854,7 +862,21 @@ export default {
   }
 };
 </script>
-<style>
+<style lang="less">
+.index {
+  overflow: auto;
+  min-height: 300px;
+  max-height: 600px;
+  max-width: 800px;
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 5px;
+  }
+  .githubBtn {
+    border: none;
+    padding: 5px;
+  }
+}
 .resize-table-th {
   position: relative;
 }
@@ -877,19 +899,6 @@ export default {
   }
   /deep/ .ant-switch-checked {
     background-color: #ff704b;
-  }
-}
-</style>
-<style lang="less">
-.index {
-  min-height: 300px;
-  .ant-table-thead > tr > th,
-  .ant-table-tbody > tr > td {
-    padding: 5px;
-  }
-  .githubBtn {
-    border: none;
-    padding: 5px;
   }
 }
 </style>
