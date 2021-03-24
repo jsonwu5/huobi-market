@@ -1,7 +1,7 @@
 <template>
   <a-select
     :placeholder="i18n.selectCoin || '请选择币种'"
-    style="width: 300px"
+    style="width: 300px;text-transfrom: uppercase"
     show-search
     allowClear
     mode="multiple"
@@ -116,10 +116,13 @@ export default {
 };
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
 .customSelect {
   .ant-select-dropdown-menu {
     max-height: 150px;
   }
+}
+/deep/ .ant-select-search__field {
+  text-transform: uppercase;
 }
 </style>
