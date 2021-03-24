@@ -49,21 +49,26 @@ export function deBonce(fn, timeout) {
   deBonce.timeID = setTimeout(fn, timeout);
 }
 
+/**
+ * 格式化数字，向下取整，不四舍五入
+ * @param val { Number } 数值
+ * @returns {string|number}
+ */
 export function formatNum(val) {
   let num = parseFloat(val);
   let absNum = Math.abs(num);
   if (absNum < 10) {
-    return num.toFixed(2);
+    return Math.floor(num * 100) / 100;
   } else if (absNum < 100) {
-    return num.toFixed(1);
+    return Math.floor(num * 10) / 10;
   } else if (absNum < 1000) {
     return num.toFixed(0);
   } else if (absNum < 10000) {
-    return (num / 1000).toFixed(1) + "k";
+    return Math.floor((num / 1000) * 10) / 10 + "k";
   } else if (absNum < 1000000) {
     return Math.floor(num / 1000) + "k";
   } else if (absNum < 10000000) {
-    return (num / 1000000).toFixed(1) + "m";
+    return Math.floor((num / 1000000) * 10) / 10 + "m";
   } else {
     return Math.floor(num / 1000000) + "m";
   }

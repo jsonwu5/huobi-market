@@ -24,7 +24,7 @@ function getMarket(coin, upsColor = true) {
       // console.log(res);
       if (res.status === "ok" && res.data.length > 0) {
         const data = res.data[0];
-        const text = formatNum(data.close);
+        const text = String(formatNum(data.close));
         chrome.browserAction.setBadgeText({
           text: text
         });
