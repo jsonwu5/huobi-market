@@ -34,7 +34,9 @@ export default new Vuex.Store({
     // 国际化翻译配置
     i18nList: {},
     // 用户设置的语言
-    userLang: localStorage.getItem("userLang") || ""
+    userLang: localStorage.getItem("userLang") || "",
+    // 表格列宽度缓存
+    tableWidths: getStorageItem("tableWidths") || []
   },
   getters: {
     i18n: state => {
@@ -90,6 +92,10 @@ export default new Vuex.Store({
     _setUserLang(state, val) {
       state.userLang = val;
       localStorage.setItem("userLang", val);
+    },
+    _setTableWidths(state, val) {
+      state.tableWidths = val;
+      localStorage.setItem("tableWidths", JSON.stringify(val));
     }
   },
   actions: {

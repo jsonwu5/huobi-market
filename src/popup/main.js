@@ -5,6 +5,9 @@ import Antd from "ant-design-vue";
 import $http from "@/http";
 import filters from "@/tools/filters";
 import "../styles/style.less";
+import VueDraggableResizable from "vue-draggable-resizable";
+
+Vue.component("vue-draggable-resizable", VueDraggableResizable);
 
 Vue.config.productionTip = false;
 Vue.config.devtools = process.env.NODE_ENV === "development";

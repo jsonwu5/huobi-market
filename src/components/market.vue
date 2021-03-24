@@ -70,7 +70,7 @@
         </a-popconfirm>
       </a-tooltip>
       <a-popover :title="i18n.customColumn || '自定义列'" trigger="click">
-        <div slot="content" style="width: 200px;">
+        <div slot="content" style="width: 200px;" class="mr20">
           <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
             <a-checkbox
               :indeterminate="indeterminate"
@@ -93,8 +93,18 @@
             </a-row>
           </a-checkbox-group>
         </div>
-        <a-icon class="pointer" type="menu" :style="{ fontSize: '18px' }" />
+        <a-icon class="pointer f18 mr20" type="menu" />
       </a-popover>
+      <a-tooltip>
+        <template slot="title">
+          {{ i18n.resetWidths || "恢复表格默认列宽度" }}
+        </template>
+        <a-icon
+          class="mr20 pointer f18"
+          @click="resetWidth()"
+          type="column-width"
+        />
+      </a-tooltip>
     </div>
     <div class="mt15">
       <a-table
@@ -104,6 +114,8 @@
         :rowKey="record => record.id"
         :pagination="false"
         @change="onTableChange"
+        :components="components"
+        bordered
       >
         <template slot="ups" slot-scope="value, row">
           <a-tag
@@ -161,12 +173,26 @@
 <script>
 import pako from "pako";
 import NP from "number-precision";
-import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 import CoinSelect from "@components/common/coinSelect";
-import { formatNum } from "@/tools";
+import { formatNum, deBonce } from "@/tools";
+import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 
 // 当用户的自选为空时，使用内置默认的自选
 const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
+// 默认的列宽度数值
+const DEFAULTWIDTHS = [
+  { dataIndex: "name", width: 50 },
+  { dataIndex: "ups", width: 80 },
+  { dataIndex: "close", width: 80 },
+  { dataIndex: "low", width: 60 },
+  { dataIndex: "high", width: 60 },
+  { dataIndex: "open", width: 60 },
+  { dataIndex: "vol", width: 60 },
+  { dataIndex: "amount", width: 50 },
+  { dataIndex: "count", width: 50 },
+  { dataIndex: "badge", width: 80 },
+  { dataIndex: "action", width: 60 }
+];
 
 NP.enableBoundaryChecking(false);
 
@@ -174,6 +200,62 @@ export default {
   name: "market",
   components: { CoinSelect },
   data() {
+    this.components = {
+      header: {
+        cell: (h, props, children) => {
+          const { key, ...restProps } = props;
+          // console.log("ResizeableTitle：", key);
+          const col = this.selectedColumns.find(col => {
+            const k = col.dataIndex || col.key;
+            return k === key;
+          });
+
+          if (!col || !col.width) {
+            return h("th", { ...restProps }, [...children]);
+          }
+
+          const dragProps = {
+            key: col.dataIndex || col.key,
+            class: "table-draggable-handle",
+            attrs: {
+              w: 10,
+              x: col.width,
+              z: 1,
+              axis: "x",
+              draggable: true,
+              resizable: false
+            },
+            on: {
+              dragging: x => {
+                col.width = Math.max(x, 1);
+                // 每次拖拽变更后的将width数值缓存到本地，下次直接使用
+                deBonce(() => {
+                  // const list = JSON.parse(JSON.stringify(this.tableWidths));
+                  // list.some(item => {
+                  //   if (item.dataIndex === key) {
+                  //     item
+                  //   }
+                  // })
+                  const arr = this.selectedColumns.map(item => {
+                    return {
+                      dataIndex: item.dataIndex,
+                      width: item.width
+                    };
+                  });
+                  this._setTableWidths(arr);
+                }, 350);
+                // 保存拖拽后width
+              }
+            }
+          };
+          const drag = h("vue-draggable-resizable", { ...dragProps });
+          return h("th", { ...restProps, class: "resize-table-th" }, [
+            ...children,
+            drag
+          ]);
+        }
+      }
+    };
     return {
       langList: [
         {
@@ -205,7 +287,6 @@ export default {
           title: "Coin",
           align: "center",
           dataIndex: "name",
-          width: 40,
           checked: true, // 是否默认勾选
           checkDisabled: true, // 是否默认禁用
           customRender: val => {
@@ -217,7 +298,6 @@ export default {
           title: "涨跌幅",
           align: "left",
           dataIndex: "ups",
-          // width: 80,
           ellipsis: false,
           checked: true,
           checkDisabled: false,
@@ -326,7 +406,6 @@ export default {
           align: "center",
           dataIndex: "action",
           ellipsis: true,
-          // width: 60,
           scopedSlots: { customRender: "action" },
           checked: true,
           checkDisabled: true,
@@ -345,9 +424,11 @@ export default {
       "upsColor",
       "badgeCoin",
       "sortConfig",
-      "userLang"
+      "userLang",
+      "tableWidths"
     ]),
     ...mapGetters(["i18n"]),
+    // 所有列数据 包含未展示的
     columns() {
       const columns = [];
       this.defColumns.forEach(item => {
@@ -356,7 +437,7 @@ export default {
       });
       return columns;
     },
-    // 选择显示的列
+    // 选择显示的列 真正展示的列
     selectedColumns() {
       const columns = [];
       this.columns.forEach(item => {
@@ -371,19 +452,28 @@ export default {
       return columns;
     },
     indexStyle() {
-      const len = this.selectedColumns.length;
+      const num = this.selectedColumns.reduce((prev, cur) => {
+        return cur.width + prev;
+      }, 0);
       return {
         // 根据表格字段动态设置页面的width
-        width: `${len > 4 ? (len * 100 > 800 ? 800 : len * 100) : 400}px`
+        // +30 是把左右内边距算进去
+        width: `${num + 30}px`
       };
     }
   },
   created() {
-    //  TODO 检查是否有新版本
-    // chrome.runtime.requestUpdateCheck(res => {
-    //   console.log(res);
-    // });
-    // 先赋值内置的，后面可能有更新的情况 test
+    // 列宽度数值初始化处理，先判断本地缓存有没有，没有就使用默认的配置
+    const widths =
+      this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
+    this.defColumns.forEach(item => {
+      widths.some(wItem => {
+        if (wItem.dataIndex === item.dataIndex) {
+          item.width = wItem.width;
+        }
+      });
+    });
+    // 先赋值内置的，后面可能有更新的情况
     this.columns.forEach(item => {
       if (item.checked) {
         this.checkedList.push(item.dataIndex);
@@ -423,9 +513,27 @@ export default {
       "_setUpsColor",
       "_setBadge",
       "_setSortConfig",
-      "_setUserLang"
+      "_setUserLang",
+      "_setTableWidths"
     ]),
     ...mapActions(["_getCoinList", "_getLanguageAll"]),
+    // 恢复默认列宽度
+    resetWidth() {
+      this.defColumns.forEach(item => {
+        DEFAULTWIDTHS.some(wItem => {
+          if (wItem.dataIndex === item.dataIndex) {
+            item.width = wItem.width;
+          }
+        });
+      });
+      const arr = this.selectedColumns.map(item => {
+        return {
+          dataIndex: item.dataIndex,
+          width: item.width
+        };
+      });
+      this._setTableWidths(arr);
+    },
     // 切换语言
     langChange(val) {
       this._setUserLang(val);
@@ -746,6 +854,20 @@ export default {
   }
 };
 </script>
+<style>
+.resize-table-th {
+  position: relative;
+}
+.table-draggable-handle {
+  /* width: 10px !important; */
+  height: 100% !important;
+  left: auto !important;
+  right: -5px;
+  cursor: col-resize;
+  touch-action: none;
+  border: none;
+}
+</style>
 <style lang="less" scoped>
 .index {
   transition: all 0.3s;

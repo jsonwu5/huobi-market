@@ -118,5 +118,9 @@
   "colOperation": {
     "message": "操作",
     "description": "The name of the action field for the custom column in the table"
+  },
+  "resetWidths": {
+    "message": "恢复表格默认列宽度",
+    "description": "Restores the default column width of the table"
   }
 }
