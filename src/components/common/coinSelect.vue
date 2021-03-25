@@ -115,13 +115,14 @@ export default {
   }
 };
 </script>
-
-<style lang="less" scoped>
+<style lang="less">
 .customSelect {
   .ant-select-dropdown-menu {
     max-height: 150px;
   }
 }
+</style>
+<style lang="less" scoped>
 /deep/ .ant-select-search__field {
   text-transform: uppercase;
 }
