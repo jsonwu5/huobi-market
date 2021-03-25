@@ -1,5 +1,6 @@
 import $http from "@/http";
 import { formatNum } from "@/tools";
+import { getStorage } from "@/tools/storage.js";
 
 let TIMER = null;
 
@@ -8,6 +9,26 @@ chrome.runtime.onMessage.addListener(request => {
   // 刷新角标提醒
   if (request.type === "refreshBadge") {
     initBadge();
+  }
+});
+
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+  for (let key in changes) {
+    const storageChange = changes[key];
+    console.info(
+      "存储键“%s”（位于“%s”命名空间中）已更改。" +
+        "原来的值为“%s”，新的值为“%s”。",
+      key,
+      namespace,
+      storageChange.oldValue,
+      storageChange.newValue
+    );
+    // 清除缓存操作后，停止角标更新并重新初始化
+    if (key === "badgeCoin" && !storageChange.newValue) {
+      // console.log("重新初始化", key, TIMER);
+      // 重新初始化
+      initBadge();
+    }
   }
 });
 
@@ -53,13 +74,15 @@ const setBadge = coin => {
     TIMER = null;
   }
   if (coin) {
-    const item = localStorage.getItem("upsColor");
-    const upsColor = item === null ? true : item === "true";
-    // 立即请求一次
-    getMarket(coin, upsColor);
-    TIMER = setInterval(() => {
+    getStorage("upsColor").then(res => {
+      const item = res.upsColor;
+      const upsColor = item === null ? true : item === "true";
+      // 立即请求一次
       getMarket(coin, upsColor);
-    }, 5000);
+      TIMER = setInterval(() => {
+        getMarket(coin, upsColor);
+      }, 5000);
+    });
   } else {
     // 不显示角标
     chrome.browserAction.setBadgeText({
@@ -70,8 +93,10 @@ const setBadge = coin => {
 
 const initBadge = () => {
   // console.log("初始化 initBadge");
-  const coin = localStorage.getItem("badgeCoin") || "";
-  setBadge(coin);
+  getStorage("badgeCoin").then(res => {
+    const coin = res.badgeCoin || "";
+    setBadge(coin);
+  });
 };
 
 // 初始化

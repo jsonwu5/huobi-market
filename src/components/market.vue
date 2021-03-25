@@ -4,6 +4,7 @@
     :class="isDev ? 'pb30' : 'pb15'"
     :style="indexStyle"
   >
+    <!--插件版本信息-->
     <a-space>
       <span class="bold f16">{{ i18n.extName || "火币行情助手" }}</span>
       <span>{{ i18n.extVersion || "当前版本" }}:{{ manifest.version }}</span>
@@ -23,12 +24,16 @@
         ><span class="ml5">{{ i18n.sourceCode || "源代码" }}</span></a-button
       >
     </a-space>
+
+    <!--币种选择器-->
     <div class="flex ac mt5">
       <coin-select v-if="coins.length" :coin.sync="selectedCoin"></coin-select>
       <a-button class="ml10" @click="addOptional(selectedCoin)">{{
         i18n.addOptional || "添加自选"
       }}</a-button>
     </div>
+
+    <!--功能按钮-->
     <div class="flex ac mt15">
       <div class="mr20">
         <a-select :value="userLang" style="width: 120px" @change="langChange">
@@ -105,7 +110,33 @@
           type="column-width"
         />
       </a-tooltip>
+      <a-tooltip>
+        <template slot="title">
+          {{ i18n.exportConfig || "导出配置" }}
+        </template>
+        <a-icon
+          class="mr20 pointer f18"
+          @click="downloadConfig()"
+          type="download"
+        />
+      </a-tooltip>
+      <a-tooltip>
+        <template slot="title">
+          {{ i18n.importConfig || "导入配置" }}
+        </template>
+        <a-upload
+          accept=".json"
+          name="file"
+          :multiple="false"
+          :before-upload="uploadConfig"
+          :show-upload-list="false"
+        >
+          <a-icon class="mr20 pointer f18" type="upload" />
+        </a-upload>
+      </a-tooltip>
     </div>
+
+    <!--行情表格-->
     <div class="mt15">
       <a-table
         :loading="loading"
@@ -175,7 +206,9 @@ import pako from "pako";
 import NP from "number-precision";
 import CoinSelect from "@components/common/coinSelect";
 import { formatNum, deBonce, throttle } from "@/tools";
+import { clearStorage, getStorage, KYELIST } from "@/tools/storage";
 import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
+import FileSaver from "file-saver";
 
 // 当用户的自选为空时，使用内置默认的自选
 const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
@@ -273,7 +306,7 @@ export default {
       checkedList: [], // 选择的字段列表
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
       checkAll: false, // 是否全选所有字段
-      loading: false, // 是否加载中
+      loading: true, // 是否加载中
       selectedCoin: [], // 选择的币种  添加自选
 
       wsUrl: process.env.VUE_APP_WS,
@@ -472,60 +505,97 @@ export default {
     }
   },
   created() {
-    // 列宽度数值初始化处理，先判断本地缓存有没有，没有就使用默认的配置
-    const widths =
-      this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
-    this.defColumns.forEach(item => {
-      widths.some(wItem => {
-        if (wItem.dataIndex === item.dataIndex) {
-          item.width = wItem.width;
-        }
-      });
+    this._initCache().then(() => {
+      this.init();
     });
-    // 先赋值内置的，后面可能有更新的情况
-    this.columns.forEach(item => {
-      if (item.checked) {
-        this.checkedList.push(item.dataIndex);
-      }
-    });
-    // 再从本地缓存获取
-    if (this.tableKeys.length) {
-      this.tableKeys.forEach(item => {
-        // 去重添加
-        if (!this.checkedList.some(cItem => cItem === item)) {
-          // 从倒数第三个个位置插入 角标和操作 固定在最右边
-          this.checkedList.splice(this.checkedList.length - 3, 0, item);
-        }
-      });
-    }
-    // 初始化时默认使用上次的排序
-    // 从本地缓存里获取上次排序的columns dataIndex字段
-    const { order, columnKey } = this.sortConfig;
-    if (order) {
-      this.columns.some(item => {
-        if (item.dataIndex === columnKey) {
-          // 设置为默认排序
-          item.defaultSortOrder = order;
-          return true;
-        }
-        return false;
-      });
-    }
-    this._getCoinList();
-    this.getOptional();
   },
   methods: {
     ...mapMutations([
       "_setMyCoinList",
       "_setTableKeys",
-      "_setStickyList",
+      "_setStickList",
       "_setUpsColor",
-      "_setBadge",
+      "_setBadgeCoin",
       "_setSortConfig",
       "_setUserLang",
       "_setTableWidths"
     ]),
-    ...mapActions(["_getCoinList", "_getLanguageAll"]),
+    ...mapActions([
+      "_getCoinList",
+      "_getLanguageAll",
+      "_initCache",
+      "_importConfig"
+    ]),
+    init() {
+      // 列宽度数值初始化处理，先判断本地缓存有没有，没有就使用默认的配置
+      const widths =
+        this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
+      this.defColumns.forEach(item => {
+        widths.some(wItem => {
+          if (wItem.dataIndex === item.dataIndex) {
+            item.width = wItem.width;
+          }
+        });
+      });
+      // 先赋值内置的，后面可能有更新的情况
+      this.columns.forEach(item => {
+        if (item.checked) {
+          this.checkedList.push(item.dataIndex);
+        }
+      });
+      // 再从本地缓存获取
+      if (this.tableKeys.length) {
+        this.tableKeys.forEach(item => {
+          // 去重添加
+          if (!this.checkedList.some(cItem => cItem === item)) {
+            // 从倒数第三个个位置插入 角标和操作 固定在最右边
+            this.checkedList.splice(this.checkedList.length - 3, 0, item);
+          }
+        });
+      }
+      // 初始化时默认使用上次的排序
+      // 从本地缓存里获取上次排序的columns dataIndex字段
+      const { order, columnKey } = this.sortConfig;
+      if (order) {
+        this.columns.some(item => {
+          if (item.dataIndex === columnKey) {
+            // 设置为默认排序
+            item.defaultSortOrder = order;
+            return true;
+          }
+          return false;
+        });
+      }
+      this._getCoinList();
+      this.getOptional();
+    },
+    // 导出配置文件
+    downloadConfig() {
+      getStorage(KYELIST).then(res => {
+        // 将json转换成字符串
+        const data = JSON.stringify(res, null, 2);
+        const blob = new Blob([data], { type: "" });
+        FileSaver.saveAs(blob, "Huobi_market_config.json");
+      });
+    },
+    // 导入配置文件
+    uploadConfig(file) {
+      // console.log(file);
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = event => {
+        // console.log(event);
+        try {
+          const data = JSON.parse(event.target.result);
+          this._importConfig(data);
+        } catch (e) {
+          console.log(e);
+          throw new Error(e);
+        }
+        // 检测是否导入成功
+      };
+      return false;
+    },
     // 恢复默认列宽度
     resetWidth() {
       this.defColumns.forEach(item => {
@@ -574,8 +644,10 @@ export default {
       chrome.tabs.create({ url: "https://support.qq.com/product/313772" });
     },
     clearLocalStorage() {
-      localStorage.clear();
-      this.$message.success("清除成功, 下次打开生效");
+      clearStorage().then(() => {
+        // this.$message.success(this.i18n.clearMsg || "清除成功, 下次打开生效");
+        location.reload();
+      });
     },
     // 自选列表变化
     onChange(checkedList) {
@@ -607,7 +679,7 @@ export default {
       });
       this.optionalCoins = data;
       this._setMyCoinList(data);
-      this._setStickyList(data);
+      this._setStickList(data);
       this.selectedCoin = []; // 清空选择框
       this.getOptional();
     },
@@ -624,7 +696,7 @@ export default {
       // 用户刚安装
       if (this.stickList.length === 0) {
         // 使用默认的并缓存到本地
-        this._setStickyList(DEFAULTCOINS);
+        this._setStickList(DEFAULTCOINS);
       }
       const marketList = [];
       // 组合成table需要的数据格式
@@ -669,10 +741,10 @@ export default {
       const list = JSON.parse(JSON.stringify(this.stickList));
       const mIndex = list.findIndex(item => item === row.name);
       list.splice(mIndex, 1);
-      this._setStickyList(list);
+      this._setStickList(list);
       // 如果设置了角标，则停止角标提醒
       if (row.badge === true) {
-        this._setBadge("");
+        this._setBadgeCoin("");
         // 通知后台js显示角标
         chrome.runtime.sendMessage({
           type: "refreshBadge"
@@ -689,7 +761,7 @@ export default {
       // 插入到第一位
       list.splice(0, 0, row.id);
       // 更新缓存
-      this._setStickyList(list);
+      this._setStickList(list);
       // 更新排序index值
       this.marketList.forEach(item => {
         item.index = list.findIndex(sItem => sItem === item.id);
@@ -875,7 +947,7 @@ export default {
           item.badge = val;
         }
       });
-      this._setBadge(val ? row.name : "");
+      this._setBadgeCoin(val ? row.name : "");
       // 通知后台js显示角标
       chrome.runtime.sendMessage({
         type: "refreshBadge"
@@ -894,6 +966,7 @@ export default {
   min-height: 300px;
   max-height: 600px;
   max-width: 800px;
+  transition: all 0.3s;
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {
     padding: 5px;
@@ -907,7 +980,6 @@ export default {
   position: relative;
 }
 .table-draggable-handle {
-  /* width: 10px !important; */
   height: 100% !important;
   left: auto !important;
   right: -5px;
@@ -918,8 +990,6 @@ export default {
 </style>
 <style lang="less" scoped>
 .index {
-  transition: all 0.3s;
-  min-height: 250px;
   /deep/ .ant-switch {
     background-color: #39c38c;
   }
