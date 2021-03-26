@@ -23,12 +23,6 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
       storageChange.oldValue,
       storageChange.newValue
     );
-    // 清除缓存操作后，停止角标更新并重新初始化
-    if (key === "badgeCoin" && !storageChange.newValue) {
-      // console.log("重新初始化", key, TIMER);
-      // 重新初始化
-      initBadge();
-    }
   }
 });
 
@@ -76,7 +70,7 @@ const setBadge = coin => {
   if (coin) {
     getStorage("upsColor").then(res => {
       const item = res.upsColor;
-      const upsColor = item === null ? true : item === "true";
+      const upsColor = item === null ? true : item === true;
       // 立即请求一次
       getMarket(coin, upsColor);
       TIMER = setInterval(() => {

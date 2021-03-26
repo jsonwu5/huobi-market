@@ -633,6 +633,7 @@ export default {
     },
     switchChange(e) {
       this._setUpsColor(e);
+      // 通知角标重新初始化
       chrome.runtime.sendMessage({
         type: "refreshBadge"
       });
@@ -646,6 +647,10 @@ export default {
     clearLocalStorage() {
       clearStorage().then(() => {
         // this.$message.success(this.i18n.clearMsg || "清除成功, 下次打开生效");
+        // 通知角标重新初始化
+        chrome.runtime.sendMessage({
+          type: "refreshBadge"
+        });
         location.reload();
       });
     },
