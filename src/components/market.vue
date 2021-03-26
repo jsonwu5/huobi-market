@@ -467,8 +467,12 @@ export default {
     // 所有列数据 包含未展示的
     columns() {
       const columns = [];
+      // 初始化时默认使用上次的排序
+      // 从缓存中里获取上次排序的columns dataIndex字段
+      const { order, columnKey } = this.sortConfig;
       this.defColumns.forEach(item => {
         item.title = this.i18n[item.i18nKey];
+        item.sortOrder = item.dataIndex === columnKey ? order : false;
         columns.push(item);
       });
       return columns;
@@ -555,19 +559,6 @@ export default {
             // 从倒数第三个个位置插入 角标和操作 固定在最右边
             this.checkedList.splice(this.checkedList.length - 3, 0, item);
           }
-        });
-      }
-      // 初始化时默认使用上次的排序
-      // 从缓存中里获取上次排序的columns dataIndex字段
-      const { order, columnKey } = this.sortConfig;
-      if (order) {
-        this.columns.some(item => {
-          if (item.dataIndex === columnKey) {
-            // 设置为默认排序
-            item.defaultSortOrder = order;
-            return true;
-          }
-          return false;
         });
       }
       this.getOptional();
