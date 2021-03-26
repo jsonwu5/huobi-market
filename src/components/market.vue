@@ -49,7 +49,7 @@
       <div class="mr20">
         <a-switch
           :checked-children="i18n.upsColorRed || '红涨'"
-          :un-checked-children="i18n.upsColorRed || '绿涨'"
+          :un-checked-children="i18n.upsColorGreen || '绿涨'"
           :checked="upsColor"
           @change="switchChange"
         />
