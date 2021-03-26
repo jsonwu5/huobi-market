@@ -314,7 +314,7 @@ export default {
       maxReconnect: 5, // 最大重连次数，若连接失败
       socket: null, // websocket实例
 
-      optionalCoins: [], // 当前自选的币种列表（包含本地缓存）
+      optionalCoins: [], // 当前自选的币种列表（包含缓存）
       marketList: [], // 自选的币种行情数据
       defColumns: [
         {
@@ -336,7 +336,7 @@ export default {
           checked: true,
           checkDisabled: false,
           scopedSlots: { customRender: "ups" },
-          sorter: (a, b) => a.ups > b.ups,
+          sorter: (a, b) => a.ups - b.ups,
           i18nKey: "colUps"
         },
         {
@@ -349,7 +349,7 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.close > b.close,
+          sorter: (a, b) => a.close - b.close,
           i18nKey: "colClose"
         },
         {
@@ -362,7 +362,7 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.low > b.low,
+          sorter: (a, b) => a.low - b.low,
           i18nKey: "colLow"
         },
         {
@@ -375,7 +375,7 @@ export default {
           customRender: val => {
             return `$${val}`;
           },
-          sorter: (a, b) => a.high > b.high,
+          sorter: (a, b) => a.high - b.high,
           i18nKey: "colHigh"
         },
         {
@@ -385,7 +385,7 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.open > b.open,
+          sorter: (a, b) => a.open - b.open,
           i18nKey: "colOpen"
         },
         {
@@ -403,7 +403,7 @@ export default {
                 : NP.round(vol, 2);
             return `￥${val}`;
           },
-          sorter: (a, b) => a.vol > b.vol,
+          sorter: (a, b) => a.vol - b.vol,
           i18nKey: "colVol"
         },
         {
@@ -413,7 +413,8 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.amount > b.amount,
+          customRender: val => formatNum(val),
+          sorter: (a, b) => a.amount - b.amount,
           i18nKey: "colAmount"
         },
         {
@@ -423,7 +424,8 @@ export default {
           ellipsis: true,
           checked: false,
           checkDisabled: false,
-          sorter: (a, b) => a.count > b.count,
+          customRender: val => formatNum(val),
+          sorter: (a, b) => a.count - b.count,
           i18nKey: "colCount"
         },
         {
@@ -505,6 +507,7 @@ export default {
     }
   },
   created() {
+    this._getCoinList();
     this._initCache().then(() => {
       this.init();
     });
@@ -527,7 +530,7 @@ export default {
       "_importConfig"
     ]),
     init() {
-      // 列宽度数值初始化处理，先判断本地缓存有没有，没有就使用默认的配置
+      // 列宽度数值初始化处理，先判断缓存中有没有，没有就使用默认的配置
       const widths =
         this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
       this.defColumns.forEach(item => {
@@ -537,13 +540,14 @@ export default {
           }
         });
       });
+      // 初始化选择的字段列表
       // 先赋值内置的，后面可能有更新的情况
       this.columns.forEach(item => {
         if (item.checked) {
           this.checkedList.push(item.dataIndex);
         }
       });
-      // 再从本地缓存获取
+      // 再从缓存中获取
       if (this.tableKeys.length) {
         this.tableKeys.forEach(item => {
           // 去重添加
@@ -554,7 +558,7 @@ export default {
         });
       }
       // 初始化时默认使用上次的排序
-      // 从本地缓存里获取上次排序的columns dataIndex字段
+      // 从缓存中里获取上次排序的columns dataIndex字段
       const { order, columnKey } = this.sortConfig;
       if (order) {
         this.columns.some(item => {
@@ -566,7 +570,6 @@ export default {
           return false;
         });
       }
-      this._getCoinList();
       this.getOptional();
     },
     // 导出配置文件
@@ -621,7 +624,7 @@ export default {
     // 表格排序变化等
     onTableChange(pagination, filters, sorter) {
       const { order, columnKey } = sorter;
-      // console.log(order, columnKey);
+      // console.log(sorter, order, columnKey);
       if (order) {
         this._setSortConfig({
           order,
@@ -688,9 +691,9 @@ export default {
       this.selectedCoin = []; // 清空选择框
       this.getOptional();
     },
-    // 从本地缓存获取自选的币种
+    // 从缓存中获取自选的币种
     getOptional() {
-      // 从本地缓存获取自选的币种
+      // 从缓存中获取自选的币种
       this.optionalCoins = JSON.parse(JSON.stringify(this.myCoinList));
       // 用户刚安装，没有自选时，使用内置默认的自选
       if (this.optionalCoins.length === 0) {
@@ -869,12 +872,12 @@ export default {
             low,
             vol
           } = res.tick;
-          item.amount = formatNum(amount);
+          item.amount = amount;
           item.open = open;
           item.close = close;
           item.high = high;
           item.id = coinName;
-          item.count = formatNum(count);
+          item.count = count;
           item.low = low;
           item.vol = vol;
           item.badge = this.badgeCoin === coinName;
