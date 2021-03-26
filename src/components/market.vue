@@ -774,6 +774,8 @@ export default {
       this.marketList.forEach(item => {
         item.index = list.findIndex(sItem => sItem === item.id);
       });
+      // 更新排序
+      this.marketList.sort((a, b) => a.index - b.index);
     },
     reconnect() {
       console.log("尝试重连");
