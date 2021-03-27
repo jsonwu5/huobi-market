@@ -1,6 +1,7 @@
 import $http from "@/http";
 import { formatNum } from "@/tools";
 import { getStorage } from "@/tools/storage.js";
+import { getAccount, getHistory } from "@/tools/hbsdk";
 
 let TIMER = null;
 
@@ -95,3 +96,5 @@ const initBadge = () => {
 
 // 初始化
 initBadge();
+getAccount();
+getHistory();
