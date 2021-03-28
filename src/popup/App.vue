@@ -20,8 +20,17 @@
             /></svg
           ><span class="ml5">{{ i18n.sourceCode || "源代码" }}</span></a-button
         >
+        <a-radio-group v-model="page">
+          <a-radio-button value="market">
+            行情市场
+          </a-radio-button>
+          <a-radio-button value="earnings">
+            收益分析
+          </a-radio-button>
+        </a-radio-group>
       </a-space>
-      <market />
+      <market v-if="page === 'market'" />
+      <earnings v-if="page === 'earnings'"></earnings>
     </div>
   </a-config-provider>
 </template>
@@ -31,13 +40,15 @@ import zhCN from "ant-design-vue/lib/locale-provider/zh_CN";
 import Market from "@/components/market.vue";
 import { mapActions, mapGetters, mapMutations, mapState } from "vuex";
 import { getStorage } from "@/tools/storage.js";
+import Earnings from "@components/earnings";
 
 export default {
   name: "App",
-  components: { Market },
+  components: { Earnings, Market },
   data() {
     return {
-      zhCN: zhCN
+      zhCN: zhCN,
+      page: "market"
     };
   },
   computed: {
@@ -70,4 +81,11 @@ export default {
 };
 </script>
 
-<style></style>
+<style lang="less">
+.app {
+  .githubBtn {
+    border: none;
+    padding: 5px;
+  }
+}
+</style>

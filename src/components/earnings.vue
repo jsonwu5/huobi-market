@@ -1,0 +1,516 @@
+<template>
+  <!-- 收益统计 -->
+  <div class="earnings pl15 pt15 pr15 " :class="isDev ? 'pb15' : ''">
+    <div class="flex ac">
+      <a-tooltip>
+        <template slot="title">
+          {{ i18n.exportConfig || "导出配置" }}
+        </template>
+        <a-icon
+          class="mr20 pointer f18"
+          @click="downloadConfig()"
+          type="download"
+        />
+      </a-tooltip>
+      <a-tooltip>
+        <template slot="title">
+          {{ i18n.importConfig || "导入配置" }}
+        </template>
+        <a-upload
+          accept=".csv"
+          name="file"
+          :multiple="false"
+          :before-upload="uploadConfig"
+          :show-upload-list="false"
+        >
+          <a-icon class="mr20 pointer f18" type="upload" />
+        </a-upload>
+      </a-tooltip>
+    </div>
+    <div class="mt10">
+      <a-table
+        :loading="loading"
+        :columns="columns"
+        :dataSource="records"
+        :rowKey="record => record.id"
+        :pagination="false"
+        @change="onTableChange"
+        bordered
+      >
+        <template slot="gainsUps" slot-scope="value, row">
+          <a-tag
+            :color="
+              row.gainsUps >= 0
+                ? upsColor
+                  ? 'volcano'
+                  : 'green'
+                : upsColor
+                ? 'green'
+                : 'volcano'
+            "
+          >
+            {{ `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%` }}
+          </a-tag>
+        </template>
+        <a-space slot="action" align="center" slot-scope="value, row">
+          <a-tooltip>
+            <template slot="title">删除该币种数据</template>
+            <a-popconfirm
+              title="确认要删除该币种分析数据吗"
+              :ok-text="i18n.affirm || '确认'"
+              :cancel-text="i18n.cancel || '取消'"
+              @confirm="deleteCoinData(row)"
+            >
+              <a-icon
+                class="pointer"
+                type="delete"
+                :style="{ fontSize: '18px', marginTop: '2px' }"
+                theme="filled"
+              />
+            </a-popconfirm>
+          </a-tooltip>
+          <span class="pointer">详情</span>
+        </a-space>
+      </a-table>
+    </div>
+  </div>
+</template>
+
+<script>
+import NP from "number-precision";
+import { mapGetters, mapState, mapMutations } from "vuex";
+import { blob2json, throttle } from "@tools";
+// import { formatNum } from "@tools";
+
+export default {
+  name: "earnings",
+  data() {
+    return {
+      isDev: process.env.NODE_ENV === "development",
+      loading: false,
+
+      wsUrl: process.env.VUE_APP_WS,
+      lockReconnect: false, // 连接失败不进行重连
+      maxReconnect: 5, // 最大重连次数，若连接失败
+      socket: null, // websocket实例
+      dataPool: {}, // 数据缓冲池
+      analysis: {}, // 更新需要使用到的数据 每N秒更新一次
+
+      columns: [
+        {
+          title: "Coin",
+          align: "center",
+          dataIndex: "name",
+          i18nKey: "colCoin"
+        },
+        {
+          title: "最新价",
+          align: "left",
+          dataIndex: "close",
+          width: 80,
+          checked: true,
+          checkDisabled: false,
+          customRender: val => {
+            return `$${val}`;
+          },
+          sorter: (a, b) => a.close - b.close,
+          i18nKey: "colClose"
+        },
+        {
+          title: "数量",
+          align: "left",
+          dataIndex: "coinCount",
+          scopedSlots: { customRender: "coinCount" },
+          sorter: (a, b) => a.coinCount - b.coinCount,
+          i18nKey: "colCoinCount"
+        },
+        {
+          title: "买入均价",
+          align: "left",
+          dataIndex: "costPrice",
+          customRender: val => {
+            return `$${NP.round(val, 2)}`;
+          },
+          sorter: (a, b) => a.costPrice - b.costPrice,
+          i18nKey: "colCostPrice"
+        },
+        {
+          title: "总价值",
+          align: "left",
+          dataIndex: "totalNetValue",
+          customRender: val => {
+            return `$${val}`;
+          },
+          sorter: (a, b) => a.totalNetValue - b.totalNetValue,
+          i18nKey: "colTotalNetValue"
+        },
+        {
+          title: "持有收益",
+          align: "left",
+          dataIndex: "gains",
+          customRender: val => {
+            return `$${NP.round(val, 2)}`;
+          },
+          sorter: (a, b) => a.gains - b.gains,
+          i18nKey: "colGains"
+        },
+        {
+          title: "涨跌幅",
+          align: "left",
+          dataIndex: "gainsUps",
+          scopedSlots: { customRender: "gainsUps" },
+          sorter: (a, b) => a.gainsUps - b.gainsUps,
+          i18nKey: "colAainsUps"
+        },
+        {
+          title: "今日收益",
+          align: "left",
+          dataIndex: "todayGains",
+          customRender: val => {
+            return `$${NP.round(val, 4)}`;
+          },
+          sorter: (a, b) => a.todayGains - b.todayGains,
+          i18nKey: "colTodayGains"
+        },
+        {
+          title: "操作",
+          align: "center",
+          dataIndex: "action",
+          scopedSlots: { customRender: "action" },
+          i18nKey: "colOperation"
+        }
+      ]
+    };
+  },
+  computed: {
+    ...mapState(["upsColor", "buySellRecords"]),
+    ...mapGetters(["i18n"]),
+    // coinOrder() {
+    //
+    // },
+    records() {
+      let list = [];
+      const symbol = {};
+      this.buySellRecords.forEach(item => {
+        const key = item.symbol.split("/")[0];
+        if (!Object.prototype.hasOwnProperty.call(symbol, key)) {
+          symbol[key] = [];
+        }
+        symbol[key].push(item);
+      });
+      // item = 币种名称（OXT） 是大写
+      Object.keys(symbol).forEach(item => {
+        const arr = symbol[item];
+        // {
+        //   时间: "created",
+        //       交易类型: "type",
+        //     交易对: "symbol",
+        //     方向: "role",
+        //     价格: "price",
+        //     数量: "amount",
+        //     成交额: "volume",
+        //     手续费: "points"
+        // }
+        const buy = arr.filter(a => a.role === "买入");
+        const sale = arr.filter(a => a.role === "卖出");
+        // 币种最新开盘价格数据包
+        const res = Object.prototype.hasOwnProperty.call(this.analysis, item)
+          ? this.analysis[item]
+          : {};
+        // 币种最新价
+        const coinClose = res && res.tick ? res.tick.close : 0;
+        // 币种开盘价
+        const coinOpen = res && res.tick ? res.tick.open : 0;
+
+        // N次买入的币总数量（已减去支付的手续费数量）
+        const buyCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
+        // 净成本 = N次买入总金额
+        const totalCost = buy.reduce((a, b) => NP.plus(a, b.volume), 0);
+        // 买入均价（成本价） = 净成本 / N次买入总数量
+        const costPrice = NP.divide(totalCost, buyCount);
+
+        // N次卖出的币总数量
+        const saleCount = sale.reduce((a, b) => NP.plus(a, b.amount), 0);
+        // 卖出总金额（已减去支付的手续费金额） = N次卖出总金额
+        const saleTotalCost = sale.reduce(
+          (a, b) => NP.plus(a, b.realVolume),
+          0
+        );
+        // 卖出均价 = 卖出总金额 / N次卖出总数量
+        const saleCostPrice = NP.divide(saleTotalCost, saleCount);
+
+        // 持有总量 = N次买入的币总数量 - N次卖出的币总数量
+        const coinCount = NP.minus(buyCount, saleCount);
+        // 当前持币总价值 = 持有总量 * 币价
+        const totalValue = NP.times(coinCount, coinClose);
+        // 利润 = 当前持币总价值 - 净成本
+        const profit = NP.minus(totalValue, totalCost);
+        // 收益估算金额 当天的盈利金额 = 持币数量 * 最新价 - 持币数量 * 开盘价
+        const todayGains = NP.minus(
+          NP.times(coinClose, coinCount),
+          NP.times(coinOpen, coinCount)
+        );
+        // 收益日涨跌幅 = (持币数量 * 最新价 - 持币数量 * 开盘价) / 持币数量 * 开盘价
+        let gainsUps = NP.divide(todayGains, NP.times(coinOpen, coinCount));
+        gainsUps =
+          gainsUps && gainsUps > 0 ? NP.times(NP.round(gainsUps, 4), 100) : 0;
+        list.push({
+          id: item,
+          close: coinClose,
+          tick: res.tick,
+          name: item,
+          // 持有总量
+          coinCount,
+          // 买入均价
+          costPrice,
+          // 持币总价值
+          totalNetValue: totalValue,
+          // 持币收益 利润
+          gains: profit,
+          // 收益日涨跌幅
+          gainsUps,
+          // 收益估算金额 当天的盈利金额
+          todayGains,
+          // 卖出均价
+          saleCostPrice
+        });
+      });
+      return list;
+    }
+  },
+  mounted() {
+    this.initWebSocket();
+  },
+  methods: {
+    ...mapMutations(["_setBuySellRecords"]),
+    onTableChange() {},
+    deleteCoinData(row) {
+      console.log(row);
+    },
+    // 导入成交明细
+    uploadConfig(file) {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = event => {
+        if (event.target.result) {
+          this._setBuySellRecords(this.csv2Json(event.target.result));
+          // 循环订阅每个币种的主题消息d
+          if (this.socket && this.records.length) {
+            this.records.forEach(item => {
+              this.getKline(item.name.toLowerCase());
+            });
+          }
+        }
+      };
+      return false;
+    },
+    // 转成JSON数据格式
+    csv2Json(data) {
+      if (!data && !data.length) {
+        console.error("data is undefined");
+        return;
+      }
+      // 过滤掉空值 最后一条可能是空值
+      const rowsArr = data.split(/\n/).filter(item => item.length);
+      const keys = {
+        时间: "created",
+        交易类型: "type",
+        交易对: "symbol",
+        方向: "role",
+        价格: "price", // Number
+        数量: "amount", // Number
+        成交额: "volume", // Number
+        手续费: "points" // 0.62751920OXT
+      };
+      const columnKeys = []; // 列字段
+      const list = [];
+      // 删除第一条并返回删除的数据
+      rowsArr
+        .shift()
+        .split(",")
+        .forEach(kItem => {
+          // ""时间"" 去掉里面的双引号
+          columnKeys.push(keys[kItem.replace(/"/g, "")]);
+        });
+      // 2021-01-12 09:18:35,币币交易,USDT/HUSD,卖出,1.0003,310.0000,310.09300000,0.62018600HUSD,
+      // 转换成
+      // {
+      // amount: 310
+      // created: "2021-01-12 09:18:35"
+      // points: "0.62018600HUSD"
+      // price: 1.0003
+      // role: "卖出"
+      // symbol: "USDT/HUSD"
+      // type: "币币交易"
+      // volume: 310.093
+      // }
+      rowsArr.forEach(item => {
+        const obj = {};
+        item.split(",").forEach((rItem, rIndex) => {
+          if (columnKeys[rIndex]) {
+            obj[columnKeys[rIndex]] = rItem;
+            // symbol: "USDT/HUSD" 转成小写 symbol: "usdt/husd"
+            if (columnKeys[rIndex] === "symbol") {
+              obj[columnKeys[rIndex]] = rItem.toLowerCase();
+            }
+          }
+        });
+        list.push(obj);
+      });
+      list.forEach(item => {
+        item.price = Number(item.price); // “0.03906” → 0.03906
+        item.amount = Number(item.amount); // “493.5266” → 493.5266
+        item.volume = Number(item.volume); // “19.27714899” → 19.27714899
+        let value = item.points;
+        // 手续费单位 去掉所有数字和小数点并转成小写
+        if (value) {
+          item.pointsUnit = value
+            .replace(/\d+/g, "")
+            .replace(/./, "")
+            .toLowerCase(); // 0.62751920OXT = oxt
+          item.points = parseFloat(value); // 格式化手续费 0.00195049HT = 0.00195049
+        }
+        // 处理买入手续费问题
+        // 如果支付的手续费币种跟购买的币种一样 eg：LTC/USDT 手续费 xxx LTC
+        if (
+          item.role === "买入" &&
+          item.pointsUnit === item.symbol.split("/")[0]
+        ) {
+          // 实际数量 = 交易数量 - 手续费数量
+          item.realAmount = NP.minus(item.amount, item.points);
+        } else {
+          item.realAmount = item.amount;
+        }
+        // 处理卖出手续费问题
+        // 如果支付的手续费币种跟卖出的交易对一样 eg：LTC/USDT 手续费 xxx USDT
+        if (
+          item.role === "卖出" &&
+          item.pointsUnit === item.symbol.split("/")[1]
+        ) {
+          // 实际成交金额 = 交易成交金额 - 手续费金额
+          item.realVolume = NP.minus(item.volume, item.points);
+        } else {
+          item.realVolume = item.volume;
+        }
+      });
+      return list;
+    },
+    downloadConfig() {},
+
+    reconnect() {
+      console.log("尝试重连");
+      if (this.lockReconnect || this.maxReconnect <= 0) {
+        return;
+      }
+      setTimeout(() => {
+        // this.maxReconnect-- // 不做限制 连不上一直重连
+        this.initWebSocket();
+      }, 10 * 1000);
+    },
+    // 初始化websocket
+    initWebSocket() {
+      try {
+        if ("WebSocket" in window) {
+          this.loading = true;
+          this.socket = new WebSocket(this.wsUrl);
+        } else {
+          console.log("您的浏览器不支持websocket");
+        }
+        this.socket.onopen = this.websocketOnOpen;
+        this.socket.onerror = this.websocketOnError;
+        this.socket.onmessage = this.websocketOnMessage;
+        this.socket.onclose = this.websocketClose;
+      } catch (e) {
+        this.loading = false;
+        this.reconnect();
+      }
+    },
+    websocketOnOpen() {
+      this.loading = false;
+      console.log("WebSocket连接成功", this.socket.readyState);
+      // 循环订阅每个币种的主题消息d
+      if (this.socket && this.records.length) {
+        this.records.forEach(item => {
+          this.getKline(item.name.toLowerCase());
+        });
+      }
+    },
+    websocketOnError(e) {
+      console.log("WebSocket连接发生错误：", e);
+      this.reconnect();
+    },
+    // 接收数据并处理
+    websocketOnMessage(e) {
+      blob2json(e.data, res => {
+        // console.log("接收到的数据：", res);
+        if (res.ping) {
+          // 回应心跳包
+          this.socket.send(JSON.stringify(res));
+        }
+        if (res.ch) {
+          // 解析币种
+          const coinName = res.ch.split(".")[1].split("usdt")[0];
+          // 数据缓存到池子中
+          this.dataPool[coinName] = res;
+          // 初始化时立即更新一次
+          const coinItem = this.records.filter(
+            item => item.name === coinName
+          )[0];
+          if (!coinItem || !coinItem.close) {
+            // console.log("初始化更新", coinName);
+            this.analysis[coinName] = res;
+          }
+          // 节流 限制1000ms内统一批量更新一次。
+          throttle(() => {
+            // console.log("批量更新数据");
+            this.analysis = JSON.parse(JSON.stringify(this.dataPool));
+          }, 1000);
+        }
+      });
+    },
+    websocketClose(e) {
+      console.log("connection closed:", e);
+      this.reconnect();
+    },
+    /**
+     * 获取K线行情数据
+     * API: https://huobiapi.github.io/docs/spot/v1/cn/#k-2
+     * @param coin { String } 自选币种名称
+     * @param period { String } K线周期	1min, 5min, 15min, 30min, 60min, 4hour, 1day, 1mon, 1week, 1year
+     */
+    getKline(coin, period = "1day") {
+      //
+      let data = {
+        sub: `market.${coin}usdt.kline.${period}`,
+        id: "id1"
+      };
+
+      this.socket.send(JSON.stringify(data));
+    }
+  },
+  // 页面注销，关闭websocket
+  destroyed() {
+    this.socket.close();
+  }
+};
+</script>
+
+<style lang="less">
+.earnings {
+  overflow: auto;
+  min-height: 300px;
+  max-height: 600px;
+  max-width: 800px;
+  transition: all 0.3s;
+  width: 800px;
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 5px;
+  }
+  .ant-space-item {
+    display: flex;
+    align-content: center;
+    justify-content: center;
+  }
+}
+</style>

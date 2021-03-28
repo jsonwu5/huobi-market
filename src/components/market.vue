@@ -181,10 +181,9 @@
 </template>
 
 <script>
-import pako from "pako";
 import NP from "number-precision";
 import CoinSelect from "@components/common/coinSelect";
-import { formatNum, deBonce, throttle } from "@/tools";
+import { formatNum, deBonce, throttle, blob2json } from "@/tools";
 import { clearStorage, getStorage, KYELIST } from "@/tools/storage";
 import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 import FileSaver from "file-saver";
@@ -784,7 +783,7 @@ export default {
     },
     // 接收数据并处理
     websocketOnMessage(e) {
-      this.blob2json(e.data, res => {
+      blob2json(e.data, res => {
         // console.log("接收到的数据：", res);
         if (res.ping) {
           // 回应心跳包
@@ -799,7 +798,7 @@ export default {
           const coinItem = this.marketList.filter(
             item => item.name === coinName
           )[0];
-          if (!coinItem.close) {
+          if (!coinItem || !coinItem.close) {
             // console.log("初始化更新", coinName);
             this.updateTableData(res, coinName);
           }
@@ -860,18 +859,6 @@ export default {
       this.marketList.sort((a, b) => a.index - b.index);
     },
     /**
-     * 订阅指定币最近24小时的行情概要数据
-     * API: https://huobiapi.github.io/docs/spot/v1/cn/#7c47ef3411
-     * @param coin { String } 自选币种名称
-     */
-    getSynopsisBy24h(coin) {
-      let data = {
-        sub: `market.${coin}usdt.detail`,
-        id: "id1"
-      };
-      this.socket.send(JSON.stringify(data));
-    },
-    /**
      * 获取K线行情数据
      * API: https://huobiapi.github.io/docs/spot/v1/cn/#k-2
      * @param coin { String } 自选币种名称
@@ -885,24 +872,6 @@ export default {
       };
 
       this.socket.send(JSON.stringify(data));
-    },
-    /**
-     * 解压websocket返回的数据
-     * @param e { Object } 返回的数据
-     * @param callback { Function } 回调函数
-     */
-    blob2json(e, callback) {
-      let reader = new FileReader();
-      reader.readAsArrayBuffer(e, "utf-8");
-      reader.onload = function() {
-        // console.log("blob转ArrayBuffer数据类型", reader.result);
-        // 对数据进行解压
-        let msg = pako.ungzip(reader.result, {
-          to: "string"
-        });
-        // console.log("ArrayBuffer转字符串", msg);
-        callback && callback(JSON.parse(msg));
-      };
     },
     /**
      * 角标显示的币种更新
@@ -942,10 +911,6 @@ export default {
   transition: all 0.3s;
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {
-    padding: 5px;
-  }
-  .githubBtn {
-    border: none;
     padding: 5px;
   }
 }
