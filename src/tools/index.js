@@ -1,3 +1,5 @@
+import pako from "pako";
+
 /**
  *  万能函数节流 限制timeout ms内只能被触发一次。 无论你点击有多快，timeout ms也只会执行一次。
  * @param fn { Function } 事件处理函数
@@ -99,4 +101,46 @@ export function searchByKeyword(list, keyWord) {
     }
   }
   return arr;
+}
+
+/**
+ * 分割数组为每num个为一组
+ * @param array
+ * @param num { Number } 每组多少个
+ * @param complete { Boolean } 是否补全最后一组
+ * @returns {[]}
+ */
+export function splitArr(array, num = 2, complete = false) {
+  let index = 0;
+  const newArray = [];
+  while (index < array.length) {
+    newArray.push(array.slice(index, (index += num)));
+  }
+  const lastItem = newArray[newArray.length - 1];
+  // 是否补全最后一个
+  if (complete && lastItem.length < num) {
+    for (let i = 0; i < num - lastItem.length; i++) {
+      newArray.push(lastItem[0]);
+    }
+  }
+  return newArray;
+}
+
+/**
+ * 解压websocket返回的数据
+ * @param e { Object } 返回的数据
+ * @param callback { Function } 回调函数
+ */
+export function blob2json(e, callback) {
+  let reader = new FileReader();
+  reader.readAsArrayBuffer(e, "utf-8");
+  reader.onload = function() {
+    // console.log("blob转ArrayBuffer数据类型", reader.result);
+    // 对数据进行解压
+    let msg = pako.ungzip(reader.result, {
+      to: "string"
+    });
+    // console.log("ArrayBuffer转字符串", msg);
+    callback && callback(JSON.parse(msg));
+  };
 }

@@ -1,7 +1,7 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import $http from "@/http";
-import { searchByKeyword } from "@/tools";
+import { searchByKeyword, getStorageItem } from "@/tools";
 import { setStorage, getStorage, KYELIST } from "@/tools/storage.js";
 
 Vue.use(Vuex);
@@ -34,7 +34,9 @@ export default new Vuex.Store({
     // 用户设置的语言
     userLang: "",
     // 表格列宽度缓存
-    tableWidths: []
+    tableWidths: [],
+    // 现货买卖记录
+    buySellRecords: getStorageItem("buySellRecords") || []
   },
   getters: {
     i18n: state => {
@@ -94,6 +96,11 @@ export default new Vuex.Store({
     _setTableWidths(state, val) {
       state.tableWidths = val;
       setStorage({ tableWidths: val });
+    },
+    _setBuySellRecords(state, val) {
+      state.buySellRecords = val;
+      // setStorage({ buySellRecords: val });
+      localStorage.setItem("buySellRecords", JSON.stringify(val));
     }
   },
   actions: {
