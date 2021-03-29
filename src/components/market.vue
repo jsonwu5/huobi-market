@@ -187,7 +187,6 @@ import { formatNum, deBonce, throttle, blob2json } from "@/tools";
 import { clearStorage, getStorage, KYELIST } from "@/tools/storage";
 import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 import FileSaver from "file-saver";
-import { getAccount } from "@/tools/hbsdk";
 
 // 当用户的自选为空时，使用内置默认的自选
 const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
@@ -489,7 +488,6 @@ export default {
     }
   },
   created() {
-    getAccount();
     this._getCoinList();
     this._initCache().then(() => {
       this.init();

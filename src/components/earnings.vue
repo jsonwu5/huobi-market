@@ -78,7 +78,7 @@
 
 <script>
 import NP from "number-precision";
-import { mapGetters, mapState, mapMutations } from "vuex";
+import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
 import { blob2json, throttle } from "@tools";
 // import { formatNum } from "@tools";
 
@@ -283,9 +283,11 @@ export default {
   },
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
+    ...mapActions(["_deleteRecords"]),
     onTableChange() {},
     deleteCoinData(row) {
-      console.log(row);
+      this._deleteRecords(row.name);
+      this.$message.success("删除成功");
     },
     // 导入成交明细
     uploadConfig(file) {
@@ -361,6 +363,7 @@ export default {
         item.price = Number(item.price); // “0.03906” → 0.03906
         item.amount = Number(item.amount); // “493.5266” → 493.5266
         item.volume = Number(item.volume); // “19.27714899” → 19.27714899
+        item.coin = item.symbol.split("/")[0];
         let value = item.points;
         // 手续费单位 去掉所有数字和小数点并转成小写
         if (value) {
@@ -383,10 +386,7 @@ export default {
         }
         // 处理卖出手续费问题
         // 如果支付的手续费币种跟卖出的交易对一样 eg：LTC/USDT 手续费 xxx USDT
-        if (
-          item.role === "卖出" &&
-          item.pointsUnit === item.symbol.split("/")[1]
-        ) {
+        if (item.role === "卖出" && item.pointsUnit === item.coin) {
           // 实际成交金额 = 交易成交金额 - 手续费金额
           item.realVolume = NP.minus(item.volume, item.points);
         } else {
