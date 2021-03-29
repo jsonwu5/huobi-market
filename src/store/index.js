@@ -213,6 +213,12 @@ export default new Vuex.Store({
         // chrome.runtime.reload();
         location.reload();
       }
+    },
+    _deleteRecords({ commit, state }, coin) {
+      const list = state.buySellRecords.filter(
+        item => item.symbol.split("/")[0] !== coin
+      );
+      commit("_setBuySellRecords", list);
     }
   },
   modules: {}
