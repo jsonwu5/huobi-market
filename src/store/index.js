@@ -1,7 +1,8 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import $http from "@/http";
-import { getStorageItem, searchByKeyword } from "@/tools";
+import { searchByKeyword } from "@/tools";
+import { setStorage, getStorage, KYELIST } from "@/tools/storage.js";
 
 Vue.use(Vuex);
 
@@ -10,31 +11,30 @@ export default new Vuex.Store({
     // 所有支持的币列表
     coinList: [],
     // 我的自选币种列表
-    myCoinList: getStorageItem("myCoinList") || [],
+    myCoinList: [],
     // 行情表格展示的字段
-    tableKeys: getStorageItem("tableKeys") || [],
+    tableKeys: [],
     // 置顶自选币种列表
-    stickList: getStorageItem("stickList") || [],
+    stickList: [],
     // Manifest配置文件
     manifest: {},
     // 币种选择器 币种列表
     coinSelectList: [],
     // 用户配置数据
-    userOptions: getStorageItem("userOptions") || {},
+    userOptions: {},
     // 涨跌色切换 true = 红涨 false = 绿涨
     // 默认是红涨
-    upsColor:
-      localStorage.getItem("upsColor") === null
-        ? true
-        : localStorage.getItem("upsColor") === "true",
+    upsColor: true,
     // 角标上展示的币种
-    badgeCoin: localStorage.getItem("badgeCoin") || "",
+    badgeCoin: "",
     // 上次排序的配置
-    sortConfig: getStorageItem("sortConfig") || {},
+    sortConfig: {},
     // 国际化翻译配置
     i18nList: {},
     // 用户设置的语言
-    userLang: localStorage.getItem("userLang") || ""
+    userLang: "",
+    // 表格列宽度缓存
+    tableWidths: []
   },
   getters: {
     i18n: state => {
@@ -52,15 +52,15 @@ export default new Vuex.Store({
     },
     _setMyCoinList(state, val) {
       state.myCoinList = val;
-      localStorage.setItem("myCoinList", JSON.stringify(val));
+      setStorage({ myCoinList: val });
     },
     _setTableKeys(state, val) {
       state.tableKeys = val;
-      localStorage.setItem("tableKeys", JSON.stringify(val));
+      setStorage({ tableKeys: val });
     },
-    _setStickyList(state, val) {
+    _setStickList(state, val) {
       state.stickList = val;
-      localStorage.setItem("stickList", JSON.stringify(val));
+      setStorage({ stickList: val });
     },
     _setManifest(state, val) {
       state.manifest = val;
@@ -70,26 +70,30 @@ export default new Vuex.Store({
     },
     _setUserOptions(state, val) {
       state.userOptions = val;
-      localStorage.setItem("userOptions", JSON.stringify(val));
+      setStorage({ userOptions: val });
     },
     _setUpsColor(state, val) {
       state.upsColor = val;
-      localStorage.setItem("upsColor", val);
+      setStorage({ upsColor: val });
     },
-    _setBadge(state, val) {
+    _setBadgeCoin(state, val) {
       state.badgeCoin = val;
-      localStorage.setItem("badgeCoin", val);
+      setStorage({ badgeCoin: val });
     },
     _setSortConfig(state, val) {
       state.sortConfig = val;
-      localStorage.setItem("sortConfig", JSON.stringify(val));
+      setStorage({ sortConfig: val });
     },
     _setI18nList(state, val) {
       state.i18nList = val;
     },
     _setUserLang(state, val) {
       state.userLang = val;
-      localStorage.setItem("userLang", val);
+      setStorage({ userLang: val });
+    },
+    _setTableWidths(state, val) {
+      state.tableWidths = val;
+      setStorage({ tableWidths: val });
     }
   },
   actions: {
@@ -165,6 +169,43 @@ export default new Vuex.Store({
           resolve(res);
         }, 100);
       });
+    },
+    /**
+     * 初始化，同步chrome账户的缓存配置数据更新到vuex
+     * @param commit
+     * @returns {Promise<unknown>}
+     * @private
+     */
+    _initCache({ commit }) {
+      return new Promise((resolve, reject) => {
+        getStorage(KYELIST)
+          .then(res => {
+            // console.log(res);
+            for (let key in res) {
+              const value = res[key];
+              const commitKey = key.slice(0, 1).toUpperCase() + key.slice(1);
+              commit(`_set${commitKey}`, value);
+            }
+            resolve(res);
+          })
+          .catch(reject);
+      });
+    },
+    /**
+     * 导入配置并更新vuex数据
+     * @param commit
+     * @param res
+     * @private
+     */
+    _importConfig({ commit }, res = {}) {
+      for (let key in res) {
+        const value = res[key];
+        const commitKey = key.slice(0, 1).toUpperCase() + key.slice(1);
+        commit(`_set${commitKey}`, value);
+        // 重启插件
+        // chrome.runtime.reload();
+        location.reload();
+      }
     }
   },
   modules: {}

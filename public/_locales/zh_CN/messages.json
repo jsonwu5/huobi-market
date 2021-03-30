@@ -118,5 +118,21 @@
   "colOperation": {
     "message": "操作",
     "description": "The name of the action field for the custom column in the table"
+  },
+  "resetWidths": {
+    "message": "恢复表格默认列宽度",
+    "description": "Restores the default column width of the table"
+  },
+  "clearMsg": {
+    "message": "清除成功, 下次打开生效",
+    "description": "The purge was successful and will take effect next time it is opened"
+  },
+  "exportConfig": {
+    "message": "导出配置",
+    "description": "Export the configuration"
+  },
+  "importConfig": {
+    "message": "导入配置",
+    "description": "Import the configuration"
   }
 }
