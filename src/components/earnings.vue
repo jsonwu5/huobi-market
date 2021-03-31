@@ -1,6 +1,10 @@
 <template>
   <!-- 收益统计 -->
-  <div class="earnings pl15 pt15 pr15 " :class="isDev ? 'pb15' : ''">
+  <div
+    class="earnings pl15 pt15 pr15 "
+    :style="visible ? 'height:530px' : ''"
+    :class="isDev ? 'pb15' : ''"
+  >
     <div class="flex ac">
       <a-tooltip>
         <template slot="title">
@@ -69,10 +73,12 @@
               />
             </a-popconfirm>
           </a-tooltip>
-          <span class="pointer">详情</span>
+          <span class="pointer" @click="openDetails(row)">详情</span>
         </a-space>
       </a-table>
     </div>
+
+    <record v-if="visible" v-model="visible" :coin="coinName"></record>
   </div>
 </template>
 
@@ -80,12 +86,16 @@
 import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
 import { blob2json, throttle } from "@tools";
+import Record from "@components/common/record";
 // import { formatNum } from "@tools";
 
 export default {
   name: "earnings",
+  components: { Record },
   data() {
     return {
+      visible: false,
+      coinName: "",
       isDev: process.env.NODE_ENV === "development",
       loading: false,
 
@@ -285,6 +295,10 @@ export default {
     ...mapMutations(["_setBuySellRecords"]),
     ...mapActions(["_deleteRecords"]),
     onTableChange() {},
+    openDetails(row) {
+      this.coinName = row.name;
+      this.visible = true;
+    },
     deleteCoinData(row) {
       this._deleteRecords(row.name);
       this.$message.success("删除成功");
@@ -375,23 +389,29 @@ export default {
         }
         // 处理买入手续费问题
         // 如果支付的手续费币种跟购买的币种一样 eg：LTC/USDT 手续费 xxx LTC
-        if (
-          item.role === "买入" &&
-          item.pointsUnit === item.symbol.split("/")[0]
-        ) {
+        if (item.role === "买入" && item.pointsUnit === item.coin) {
           // 实际数量 = 交易数量 - 手续费数量
           item.realAmount = NP.minus(item.amount, item.points);
         } else {
           item.realAmount = item.amount;
         }
+        console.log(
+          `买入 手续费币种：${item.pointsUnit},交易对：${item.symbol},realAmount：${item.realAmount}， amount：${item.amount}, points：${item.points}`
+        );
         // 处理卖出手续费问题
         // 如果支付的手续费币种跟卖出的交易对一样 eg：LTC/USDT 手续费 xxx USDT
-        if (item.role === "卖出" && item.pointsUnit === item.coin) {
+        if (
+          item.role === "卖出" &&
+          item.pointsUnit === item.symbol.split("/")[1]
+        ) {
           // 实际成交金额 = 交易成交金额 - 手续费金额
           item.realVolume = NP.minus(item.volume, item.points);
         } else {
           item.realVolume = item.volume;
         }
+        console.log(
+          `卖出 手续费币种：${item.pointsUnit},交易对：${item.symbol},realVolume：${item.realVolume}， amount：${item.volume}, points：${item.points}`
+        );
       });
       return list;
     },
