@@ -56,23 +56,25 @@
             {{ `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%` }}
           </a-tag>
         </template>
-        <a-space slot="action" align="center" slot-scope="value, row">
-          <a-tooltip>
-            <template slot="title">删除该币种数据</template>
-            <a-popconfirm
-              title="确认要删除该币种分析数据吗"
-              :ok-text="i18n.affirm || '确认'"
-              :cancel-text="i18n.cancel || '取消'"
-              @confirm="deleteCoinData(row)"
-            >
-              <a-icon
-                class="pointer"
-                type="delete"
-                :style="{ fontSize: '18px', marginTop: '2px' }"
-                theme="filled"
-              />
-            </a-popconfirm>
-          </a-tooltip>
+        <a-space
+          slot="action"
+          align="center"
+          slot-scope="value, row"
+          v-if="value !== false"
+        >
+          <a-popconfirm
+            title="确认要删除该币种分析数据吗"
+            :ok-text="i18n.affirm || '确认'"
+            :cancel-text="i18n.cancel || '取消'"
+            @confirm="deleteCoinData(row)"
+          >
+            <a-icon
+              class="pointer"
+              type="delete"
+              :style="{ fontSize: '18px', marginTop: '2px' }"
+              theme="filled"
+            />
+          </a-popconfirm>
           <span class="pointer" @click="openDetails(row)">详情</span>
         </a-space>
       </a-table>
@@ -121,7 +123,7 @@ export default {
           checked: true,
           checkDisabled: false,
           customRender: val => {
-            return `$${val}`;
+            return val !== "-" ? `$${val}` : val;
           },
           sorter: (a, b) => a.close - b.close,
           i18nKey: "colClose"
@@ -139,7 +141,7 @@ export default {
           align: "left",
           dataIndex: "costPrice",
           customRender: val => {
-            return `$${NP.round(val, 2)}`;
+            return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
           sorter: (a, b) => a.costPrice - b.costPrice,
           i18nKey: "colCostPrice"
@@ -149,7 +151,7 @@ export default {
           align: "left",
           dataIndex: "totalNetValue",
           customRender: val => {
-            return `$${val}`;
+            return `$${NP.round(val, 2)}`;
           },
           sorter: (a, b) => a.totalNetValue - b.totalNetValue,
           i18nKey: "colTotalNetValue"
@@ -234,20 +236,20 @@ export default {
 
         // N次买入的币总数量（已减去支付的手续费数量）
         const buyCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
-        // 净成本 = N次买入总金额
-        const totalCost = buy.reduce((a, b) => NP.plus(a, b.volume), 0);
-        // 买入均价（成本价） = 净成本 / N次买入总数量
-        const costPrice = NP.divide(totalCost, buyCount);
+        // N次买入总金额（减去手续费的实际金额）
+        const buyAmount = buy.reduce((a, b) => NP.plus(a, b.realVolume), 0);
 
         // N次卖出的币总数量
-        const saleCount = sale.reduce((a, b) => NP.plus(a, b.amount), 0);
+        const saleCount = sale.reduce((a, b) => NP.plus(a, b.realAmount), 0);
         // 卖出总金额（已减去支付的手续费金额） = N次卖出总金额
-        const saleTotalCost = sale.reduce(
-          (a, b) => NP.plus(a, b.realVolume),
-          0
-        );
+        const saleAmount = sale.reduce((a, b) => NP.plus(a, b.realVolume), 0);
         // 卖出均价 = 卖出总金额 / N次卖出总数量
-        const saleCostPrice = NP.divide(saleTotalCost, saleCount);
+        const saleCostPrice = NP.divide(saleAmount, saleCount);
+
+        // 净成本 = N次买入总金额（减去手续费的实际金额） - N次卖出总金额(减去手续费的实际金额)
+        const totalCost = NP.minus(buyAmount, saleAmount);
+        // 买入均价（成本价） = 净成本 / N次买入总数量
+        const costPrice = NP.divide(totalCost, buyCount);
 
         // 持有总量 = N次买入的币总数量 - N次卖出的币总数量
         const coinCount = NP.minus(buyCount, saleCount);
@@ -262,8 +264,7 @@ export default {
         );
         // 收益日涨跌幅 = (持币数量 * 最新价 - 持币数量 * 开盘价) / 持币数量 * 开盘价
         let gainsUps = NP.divide(todayGains, NP.times(coinOpen, coinCount));
-        gainsUps =
-          gainsUps && gainsUps > 0 ? NP.times(NP.round(gainsUps, 4), 100) : 0;
+        gainsUps = NP.times(NP.round(gainsUps, 4), 100);
         list.push({
           id: item,
           close: coinClose,
@@ -282,8 +283,29 @@ export default {
           // 收益估算金额 当天的盈利金额
           todayGains,
           // 卖出均价
-          saleCostPrice
+          saleCostPrice,
+          // 净成本
+          totalCost
         });
+      });
+      const totalAllCost = list.reduce((a, b) => NP.plus(a, b.totalCost), 0);
+      const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
+      list.push({
+        name: "合计",
+        close: "-",
+        coinCount: "-",
+        costPrice: "-",
+        totalNetValue: list.reduce((a, b) => NP.plus(a, b.totalNetValue), 0),
+        // 总收益
+        gains: allGains,
+        // 总收益率 = 总收益 / 总净成本
+        gainsUps: NP.times(NP.round(NP.divide(allGains, totalAllCost), 4), 100),
+        // 今日收益
+        todayGains: list.reduce((a, b) => NP.plus(a, b.todayGains), 0),
+        saleCostPrice: "-",
+        // 总成本
+        totalCost: totalAllCost,
+        action: false
       });
       return list;
     }
@@ -395,9 +417,9 @@ export default {
         } else {
           item.realAmount = item.amount;
         }
-        console.log(
-          `买入 手续费币种：${item.pointsUnit},交易对：${item.symbol},realAmount：${item.realAmount}， amount：${item.amount}, points：${item.points}`
-        );
+        // console.log(
+        //   `买入 手续费币种：${item.pointsUnit},交易对：${item.symbol},realAmount：${item.realAmount}， amount：${item.amount}, points：${item.points}`
+        // );
         // 处理卖出手续费问题
         // 如果支付的手续费币种跟卖出的交易对一样 eg：LTC/USDT 手续费 xxx USDT
         if (
@@ -409,9 +431,9 @@ export default {
         } else {
           item.realVolume = item.volume;
         }
-        console.log(
-          `卖出 手续费币种：${item.pointsUnit},交易对：${item.symbol},realVolume：${item.realVolume}， amount：${item.volume}, points：${item.points}`
-        );
+        // console.log(
+        //   `卖出 手续费币种：${item.pointsUnit},交易对：${item.symbol},realVolume：${item.realVolume}， amount：${item.volume}, points：${item.points}`
+        // );
       });
       return list;
     },
