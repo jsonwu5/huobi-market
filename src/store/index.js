@@ -1,7 +1,7 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import $http from "@/http";
-import { searchByKeyword, getStorageItem } from "@/tools";
+import { searchByKeyword } from "@/tools";
 import { setStorage, getStorage, KYELIST } from "@/tools/storage.js";
 
 Vue.use(Vuex);
@@ -36,7 +36,7 @@ export default new Vuex.Store({
     // 表格列宽度缓存
     tableWidths: [],
     // 现货买卖记录
-    buySellRecords: getStorageItem("buySellRecords") || []
+    buySellRecords: []
   },
   getters: {
     i18n: state => {
@@ -99,8 +99,7 @@ export default new Vuex.Store({
     },
     _setBuySellRecords(state, val) {
       state.buySellRecords = val;
-      // setStorage({ buySellRecords: val });
-      localStorage.setItem("buySellRecords", JSON.stringify(val));
+      setStorage({ buySellRecords: val });
     }
   },
   actions: {
@@ -214,6 +213,13 @@ export default new Vuex.Store({
         location.reload();
       }
     },
+    /**
+     * 删除指定币种加减仓记录
+     * @param commit
+     * @param state
+     * @param coin { String } 币种名称（小写）
+     * @private
+     */
     _deleteRecords({ commit, state }, coin) {
       const list = state.buySellRecords.filter(
         item => item.symbol.split("/")[0] !== coin
