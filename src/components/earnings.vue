@@ -8,7 +8,7 @@
     <div class="flex ac">
       <a-tooltip>
         <template slot="title">
-          {{ i18n.exportConfig || "导出配置" }}
+          {{ i18n.exportConfig || "导出订单明细" }}
         </template>
         <a-icon
           class="mr20 pointer f18"
@@ -18,7 +18,7 @@
       </a-tooltip>
       <a-tooltip>
         <template slot="title">
-          {{ i18n.importConfig || "导入配置" }}
+          {{ i18n.importConfig || "导入订单明细" }}
         </template>
         <a-upload
           accept=".csv"
@@ -53,7 +53,10 @@
                 : 'volcano'
             "
           >
-            {{ `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%` }}
+            <span v-if="row.gainsUps">{{
+              `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%`
+            }}</span>
+            <span v-else>0%</span>
           </a-tag>
         </template>
         <a-space
@@ -291,6 +294,7 @@ export default {
       const totalAllCost = list.reduce((a, b) => NP.plus(a, b.totalCost), 0);
       const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
       list.push({
+        id: "total",
         name: "合计",
         close: "-",
         coinCount: "-",
@@ -532,6 +536,7 @@ export default {
   },
   // 页面注销，关闭websocket
   destroyed() {
+    this.lockReconnect = true;
     this.socket.close();
   }
 };

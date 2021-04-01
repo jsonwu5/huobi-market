@@ -83,6 +83,7 @@ export default {
 
 <style lang="less">
 .app {
+  transition: all 0.3s;
   .githubBtn {
     border: none;
     padding: 5px;
