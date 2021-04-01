@@ -288,7 +288,7 @@ export default {
       selectedCoin: [], // 选择的币种  添加自选
 
       wsUrl: process.env.VUE_APP_WS,
-      lockReconnect: false, // 连接失败不进行重连
+      lockReconnect: false, // 不进行重连
       maxReconnect: 5, // 最大重连次数，若连接失败
       socket: null, // websocket实例
 
@@ -898,6 +898,7 @@ export default {
   },
   // 页面注销，关闭websocket
   destroyed() {
+    this.lockReconnect = true;
     this.socket.close();
   }
 };
