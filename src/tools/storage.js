@@ -8,7 +8,8 @@ export const KYELIST = [
   "badgeCoin",
   "sortConfig",
   "userLang",
-  "tableWidths"
+  "tableWidths",
+  "buySellRecords"
 ];
 
 /**
@@ -16,18 +17,20 @@ export const KYELIST = [
  * @param obj { Object } 需要缓存的键值对象
  */
 export function setStorage(obj) {
-  chrome.storage.sync.set(obj);
+  chrome.storage.largeSync.set(obj);
 }
 
 /**
  * 从chrome账户获取缓存数据
- * @param key { String | Array } 键值名称/键值数组
+ * @param keys { String | Array } 键值名称/键值数组
  * @returns {Promise<unknown>}
  */
-export function getStorage(key) {
+export function getStorage(keys) {
+  // 只能传递数组给largeSync，否则取不出值
+  let key = typeof keys === "string" ? [keys] : keys;
   return new Promise((resolve, reject) => {
     try {
-      chrome.storage.sync.get(key, resolve);
+      chrome.storage.largeSync.get(key, resolve);
     } catch (e) {
       reject(e);
     }
@@ -35,7 +38,7 @@ export function getStorage(key) {
 }
 
 /**
- * 同步缓存到chrome账号
+ * 缓存本地
  * @param obj { Object } 需要缓存的键值对象
  */
 export function setLocalStorage(obj) {
@@ -43,14 +46,14 @@ export function setLocalStorage(obj) {
 }
 
 /**
- * 从chrome账户获取缓存数据
+ * 从本地获取缓存数据
  * @param key { String | Array } 键值名称/键值数组
  * @returns {Promise<unknown>}
  */
 export function getLocalStorage(key) {
   return new Promise((resolve, reject) => {
     try {
-      chrome.storage.sync.get(key, resolve);
+      chrome.storage.local.get(key, resolve);
     } catch (e) {
       reject(e);
     }
@@ -64,7 +67,7 @@ export function getLocalStorage(key) {
 export function clearStorage() {
   return new Promise((resolve, reject) => {
     try {
-      chrome.storage.sync.clear(resolve);
+      chrome.storage.largeSync.clear(resolve);
     } catch (e) {
       reject(e);
     }
