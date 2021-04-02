@@ -6,8 +6,6 @@ import $http from "@/http";
 import filters from "@/tools/filters";
 import "../styles/style.less";
 import VueDraggableResizable from "vue-draggable-resizable";
-// 分片存储，解决单个storage item不能超过8kb的问题
-import "chrome-storage-largesync/dist/chrome-Storage-largeSync.js";
 
 Vue.component("vue-draggable-resizable", VueDraggableResizable);
 
