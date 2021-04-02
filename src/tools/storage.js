@@ -1,3 +1,6 @@
+// 分片存储，解决单个storage item不能超过8kb的问题
+import "chrome-storage-largesync/dist/chrome-Storage-largeSync.js";
+
 // 需要chrome账号同步的Storage key名称列表
 export const KYELIST = [
   "myCoinList",
