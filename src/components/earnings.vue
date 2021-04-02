@@ -8,9 +8,10 @@
     <div class="flex ac">
       <a-tooltip>
         <template slot="title">
-          {{ i18n.exportConfig || "导出订单明细" }}
+          {{ i18n.exportConfig || "导出Excel" }}
         </template>
         <a-icon
+          v-if="false"
           class="mr20 pointer f18"
           @click="downloadConfig()"
           type="download"
@@ -30,17 +31,39 @@
           <a-icon class="mr20 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
+      <a-button @click="columnsVisible = true">自定义列</a-button>
     </div>
     <div class="mt10">
       <a-table
         :loading="loading"
-        :columns="columns"
+        :columns="selectedColumns"
         :dataSource="records"
         :rowKey="record => record.id"
         :pagination="false"
-        @change="onTableChange"
         bordered
       >
+        <template slot="todayGainsUps" slot-scope="value, row">
+          <a-tag
+            :color="
+              row.todayGainsUps >= 0
+                ? upsColor
+                  ? 'volcano'
+                  : 'green'
+                : upsColor
+                ? 'green'
+                : 'volcano'
+            "
+          >
+            <span v-if="row.todayGainsUps">{{
+              `${
+                row.todayGainsUps > 0
+                  ? "+" + row.todayGainsUps
+                  : row.todayGainsUps
+              }%`
+            }}</span>
+            <span v-else>0%</span>
+          </a-tag>
+        </template>
         <template slot="gainsUps" slot-scope="value, row">
           <a-tag
             :color="
@@ -84,6 +107,13 @@
     </div>
 
     <record v-if="visible" v-model="visible" :coin="coinName"></record>
+
+    <custom-columns
+      v-if="columnsVisible"
+      v-model="selectedColumns"
+      :visible.sync="columnsVisible"
+      :columns.sync="columns"
+    ></custom-columns>
   </div>
 </template>
 
@@ -92,17 +122,18 @@ import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
 import { blob2json, throttle } from "@tools";
 import Record from "@components/common/record";
-// import { formatNum } from "@tools";
+import CustomColumns from "@components/common/customColumns";
 
 export default {
   name: "earnings",
-  components: { Record },
+  components: { Record, CustomColumns },
   data() {
     return {
       visible: false,
       coinName: "",
       isDev: process.env.NODE_ENV === "development",
       loading: false,
+      columnsVisible: false,
 
       wsUrl: process.env.VUE_APP_WS,
       lockReconnect: false, // 连接失败不进行重连
@@ -111,20 +142,23 @@ export default {
       dataPool: {}, // 数据缓冲池
       analysis: {}, // 更新需要使用到的数据 每N秒更新一次
 
+      selectedColumns: [],
       columns: [
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: true, // 是否默认禁用
           title: "Coin",
           align: "center",
           dataIndex: "name",
           i18nKey: "colCoin"
         },
         {
+          checked: true,
+          checkDisabled: false,
           title: "最新价",
           align: "left",
           dataIndex: "close",
           width: 80,
-          checked: true,
-          checkDisabled: false,
           customRender: val => {
             return val !== "-" ? `$${val}` : val;
           },
@@ -132,24 +166,45 @@ export default {
           i18nKey: "colClose"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "数量",
           align: "left",
           dataIndex: "coinCount",
-          scopedSlots: { customRender: "coinCount" },
+          customRender: val => {
+            return val !== "-" ? `${NP.round(val, 2)}` : val;
+          },
           sorter: (a, b) => a.coinCount - b.coinCount,
           i18nKey: "colCoinCount"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "买入均价",
           align: "left",
           dataIndex: "costPrice",
           customRender: val => {
+            // TODO 按币价来计算显示几位小数
             return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
           sorter: (a, b) => a.costPrice - b.costPrice,
           i18nKey: "colCostPrice"
         },
         {
+          checked: false, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "净成本",
+          align: "left",
+          dataIndex: "totalCost",
+          customRender: val => {
+            return val !== "-" ? `$${NP.round(val, 2)}` : val;
+          },
+          sorter: (a, b) => a.totalCost - b.totalCost,
+          i18nKey: "colTotalCost"
+        },
+        {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "总价值",
           align: "left",
           dataIndex: "totalNetValue",
@@ -160,6 +215,8 @@ export default {
           i18nKey: "colTotalNetValue"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "持有收益",
           align: "left",
           dataIndex: "gains",
@@ -170,14 +227,28 @@ export default {
           i18nKey: "colGains"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "涨跌幅",
+          align: "left",
+          dataIndex: "todayGainsUps",
+          scopedSlots: { customRender: "todayGainsUps" },
+          sorter: (a, b) => a.todayGainsUps - b.todayGainsUps,
+          i18nKey: "colTodayGainsUps"
+        },
+        {
+          checked: false, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "总收益率",
           align: "left",
           dataIndex: "gainsUps",
           scopedSlots: { customRender: "gainsUps" },
           sorter: (a, b) => a.gainsUps - b.gainsUps,
-          i18nKey: "colAainsUps"
+          i18nKey: "colGainsUps"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
           title: "今日收益",
           align: "left",
           dataIndex: "todayGains",
@@ -188,6 +259,8 @@ export default {
           i18nKey: "colTodayGains"
         },
         {
+          checked: true, // 是否默认勾选
+          checkDisabled: true, // 是否默认禁用
           title: "操作",
           align: "center",
           dataIndex: "action",
@@ -200,9 +273,6 @@ export default {
   computed: {
     ...mapState(["upsColor", "buySellRecords"]),
     ...mapGetters(["i18n"]),
-    // coinOrder() {
-    //
-    // },
     records() {
       let list = [];
       const symbol = {};
@@ -257,17 +327,24 @@ export default {
         // 持有总量 = N次买入的币总数量 - N次卖出的币总数量
         const coinCount = NP.minus(buyCount, saleCount);
         // 当前持币总价值 = 持有总量 * 币价
-        const totalValue = NP.times(coinCount, coinClose);
+        const totalNetValue = NP.times(coinCount, coinClose);
         // 利润 = 当前持币总价值 - 净成本
-        const profit = NP.minus(totalValue, totalCost);
+        const gains = NP.minus(totalNetValue, totalCost);
         // 收益估算金额 当天的盈利金额 = 持币数量 * 最新价 - 持币数量 * 开盘价
         const todayGains = NP.minus(
           NP.times(coinClose, coinCount),
           NP.times(coinOpen, coinCount)
         );
         // 收益日涨跌幅 = (持币数量 * 最新价 - 持币数量 * 开盘价) / 持币数量 * 开盘价
-        let gainsUps = NP.divide(todayGains, NP.times(coinOpen, coinCount));
-        gainsUps = NP.times(NP.round(gainsUps, 4), 100);
+        let todayGainsUps = NP.divide(
+          todayGains,
+          NP.times(coinOpen, coinCount)
+        );
+        todayGainsUps = NP.times(NP.round(todayGainsUps, 4), 100);
+        // 单个币种总收益率
+        let gainsUps = NP.round(NP.divide(gains, totalCost), 4);
+        gainsUps = NP.times(gainsUps, 100);
+
         list.push({
           id: item,
           close: coinClose,
@@ -278,34 +355,48 @@ export default {
           // 买入均价
           costPrice,
           // 持币总价值
-          totalNetValue: totalValue,
+          totalNetValue,
           // 持币收益 利润
-          gains: profit,
-          // 收益日涨跌幅
+          gains,
+          // 持币总收益率
           gainsUps,
           // 收益估算金额 当天的盈利金额
           todayGains,
+          // 收益日涨跌幅
+          todayGainsUps,
           // 卖出均价
           saleCostPrice,
           // 净成本
           totalCost
         });
       });
+
       const totalAllCost = list.reduce((a, b) => NP.plus(a, b.totalCost), 0);
       const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
+      const totalTodayGains = list.reduce(
+        (a, b) => NP.plus(a, b.todayGains),
+        0
+      );
+      // 所有币种数据统计
       list.push({
         id: "total",
         name: "合计",
         close: "-",
         coinCount: "-",
         costPrice: "-",
+        // 总价值
         totalNetValue: list.reduce((a, b) => NP.plus(a, b.totalNetValue), 0),
         // 总收益
         gains: allGains,
+        // 今日所有币种收益率涨跌幅 = 今日总收益 / 总成本
+        todayGainsUps: NP.times(
+          NP.round(NP.divide(totalTodayGains, totalAllCost), 4),
+          100
+        ),
         // 总收益率 = 总收益 / 总净成本
         gainsUps: NP.times(NP.round(NP.divide(allGains, totalAllCost), 4), 100),
         // 今日收益
-        todayGains: list.reduce((a, b) => NP.plus(a, b.todayGains), 0),
+        todayGains: totalTodayGains,
         saleCostPrice: "-",
         // 总成本
         totalCost: totalAllCost,
@@ -314,13 +405,13 @@ export default {
       return list;
     }
   },
-  mounted() {
+  created() {
     this.initWebSocket();
+    this.selectedColumns = this.columns.filter(item => item.checked);
   },
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
     ...mapActions(["_deleteRecords"]),
-    onTableChange() {},
     openDetails(row) {
       this.coinName = row.name;
       this.visible = true;
