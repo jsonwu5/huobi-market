@@ -1,7 +1,6 @@
 import $http from "@/http";
 import { formatNum } from "@/tools";
 import { getStorage } from "@/tools/storage.js";
-// import { getAccount, getHistory } from "@/tools/hbsdk";
 
 let TIMER = null;
 
@@ -96,14 +95,3 @@ const initBadge = () => {
 
 // 初始化
 initBadge();
-// getAccount();
-// getHistory("/v1/order/matchresults", {
-//   // "account-id": config.account_id_pro,
-//   // "start-time": "",
-//   // "end-time": "",
-//   "start-date": "2021-02-04",
-//   "end-date": "2021-03-27",
-//   symbol: "oxtusdt",
-//   types:
-//     "buy-market,buy-limit,buy-ioc,sell-market,sell-limit,sell-ioc,buy-stop-limit,sell-stop-limit,buy-limit-maker,sell-limit-maker,buy-limit-fok,sell-limit-fok,buy-stop-limit-fok,sell-stop-limit-fok"
-// });
