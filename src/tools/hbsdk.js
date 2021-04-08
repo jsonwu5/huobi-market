@@ -5,10 +5,10 @@ import CryptoJS from "crypto-js";
 import { splitArr } from "@/tools";
 
 const config = {
-  access_key: "f989c12e-24c3ff94-c617c4b0-bewr5drtmh",
-  secret_key: "f1ed7f50-3fbb8969-0091d21d-3a658",
-  account_id: "179960437",
-  account_id_pro: "18317091",
+  access_key: "",
+  secret_key: "",
+  account_id: "",
+  account_id_pro: "",
   trade_password: ""
 };
 
