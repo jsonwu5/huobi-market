@@ -93,7 +93,7 @@ export default {
     },
     handleSearch(value) {
       deBonce(() => {
-        this.params.coinName = value;
+        this.params.coinName = value.toLowerCase();
         this.getCoins(true);
       }, 350);
     },
