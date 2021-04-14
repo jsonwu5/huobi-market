@@ -1,39 +1,39 @@
 <template>
   <div class="customColumns">
-    <a-modal title="自定义列" :visible="show" @ok="handleOk" @cancel="close()">
-      <div>
-        <div class="mb10" :style="{ borderBottom: '1px solid #E9E9E9' }">
+    <a-popover :title="i18n.customColumn || '自定义列'" trigger="click">
+      <div slot="content" style="width: 200px;" class="mr20">
+        <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
           <a-checkbox
             :indeterminate="indeterminate"
             :checked="checkAll"
             @change="onCheckAllChange"
-            >全选</a-checkbox
           >
+            {{ i18n.checkAll || "全选" }}
+          </a-checkbox>
         </div>
         <!-- 自定义列字段列表 -->
         <a-checkbox-group v-model="checkedList" @change="onChange">
           <a-row>
-            <a-col
-              class="mb5"
-              :span="8"
-              v-for="item in columns"
-              :key="item.dataIndex"
-            >
+            <a-col v-for="item in columns" :key="item.dataIndex" :span="12">
               <a-checkbox
                 :value="item.dataIndex"
                 :disabled="item.checkDisabled"
+                >{{ item.title }}</a-checkbox
               >
-                {{ item.title }}
-              </a-checkbox>
             </a-col>
           </a-row>
         </a-checkbox-group>
       </div>
-    </a-modal>
+      <slot>
+        <a-icon class="pointer f18 mr20" type="menu" />
+      </slot>
+    </a-popover>
   </div>
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+
 export default {
   name: "customColumns",
   model: {
@@ -41,10 +41,6 @@ export default {
     event: "change"
   },
   props: {
-    visible: {
-      type: Boolean,
-      default: false
-    },
     // 所有列
     columns: {
       type: Array,
@@ -60,19 +56,16 @@ export default {
     return {
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
       checkedList: [], // 选择的字段列表
-      checkAll: false, // 是否全选所有字段
-      show: false
+      checkAll: false // 是否全选所有字段
     };
   },
+  computed: {
+    ...mapGetters(["i18n"])
+  },
   watch: {
-    visible: {
-      handler(val) {
-        this.show = val;
-      },
-      immediate: true
-    },
     value: {
       handler() {
+        this.checkedList = [];
         this.value.forEach(item => {
           this.checkedList.push(item.dataIndex);
         });
@@ -81,8 +74,12 @@ export default {
     }
   },
   methods: {
-    close() {
-      this.$emit("update:visible", false);
+    // 自选列表变化
+    onChange(checkedList) {
+      this.indeterminate =
+        !!checkedList.length && checkedList.length < this.columns.length;
+      this.checkAll = checkedList.length === this.columns.length;
+      this.handleOk();
     },
     // 自定义列全选所有字段
     onCheckAllChange(e) {
@@ -93,12 +90,8 @@ export default {
         indeterminate: false,
         checkAll: e.target.checked
       });
-    },
-    // 自选列表变化
-    onChange(checkedList) {
-      this.indeterminate =
-        !!checkedList.length && checkedList.length < this.columns.length;
-      this.checkAll = checkedList.length === this.columns.length;
+      this.handleOk();
+      // this._setTableKeys(this.checkedList);
     },
     handleOk() {
       const list = this.columns;
@@ -110,9 +103,8 @@ export default {
           value.push(item);
         }
       });
-      this.$emit("update:columns", list);
       this.$emit("change", value);
-      this.close();
+      this.$emit("update", this.checkedList);
     }
   }
 };

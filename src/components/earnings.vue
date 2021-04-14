@@ -31,7 +31,9 @@
           <a-icon class="mr20 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
-      <a-button @click="columnsVisible = true">自定义列</a-button>
+      <custom-columns v-model="selectedColumns" :columns="columns"
+        ><a-button class="mb5">自定义列</a-button></custom-columns
+      >
     </div>
     <div class="mt10">
       <a-table
@@ -107,13 +109,6 @@
     </div>
 
     <record v-if="visible" v-model="visible" :coin="coinName"></record>
-
-    <custom-columns
-      v-if="columnsVisible"
-      v-model="selectedColumns"
-      :visible.sync="columnsVisible"
-      :columns.sync="columns"
-    ></custom-columns>
   </div>
 </template>
 
@@ -133,7 +128,6 @@ export default {
       coinName: "",
       isDev: process.env.NODE_ENV === "development",
       loading: false,
-      columnsVisible: false,
 
       wsUrl: process.env.VUE_APP_WS,
       lockReconnect: false, // 连接失败不进行重连
