@@ -8,7 +8,9 @@
     width="calc(100% - 30px)"
   >
     <div class="width-100">
-      <a-button class="mb5" @click="columnsVisible = true">自定义列</a-button>
+      <custom-columns v-model="selectedColumns" :columns="columns"
+        ><a-button class="mb5">自定义列</a-button></custom-columns
+      >
       <a-table
         :pagination="false"
         :columns="selectedColumns"
@@ -25,13 +27,6 @@
           created | formatDate
         }}</span>
       </a-table>
-
-      <custom-columns
-        v-if="columnsVisible"
-        v-model="selectedColumns"
-        :visible.sync="columnsVisible"
-        :columns.sync="columns"
-      ></custom-columns>
     </div>
   </a-modal>
 </template>
