@@ -14,71 +14,13 @@
 
     <!--功能按钮-->
     <div class="flex ac mt15">
-      <div class="mr20">
-        <a-select :value="userLang" style="width: 120px" @change="langChange">
-          <a-select-option
-            v-for="item in langList"
-            :value="item.lang"
-            :key="item.lang"
-          >
-            {{ item.name }}
-          </a-select-option>
-        </a-select>
-      </div>
-      <div class="mr20">
-        <a-switch
-          :checked-children="i18n.upsColorRed || '红涨'"
-          :un-checked-children="i18n.upsColorGreen || '绿涨'"
-          :checked="upsColor"
-          @change="switchChange"
-        />
-      </div>
-      <a-tooltip>
-        <template slot="title">
-          {{ i18n.clearCache || "清除缓存" }}
-        </template>
-        <a-popconfirm
-          :title="
-            i18n.clearCacheWarn || '清除缓存后会重置为默认自选，是否清除？'
-          "
-          :ok-text="i18n.affirm || '确认'"
-          :cancel-text="i18n.cancel || '取消'"
-          @confirm="clearLocalStorage"
-        >
-          <a-icon
-            class="pointer mr20"
-            type="rest"
-            :style="{ fontSize: '18px' }"
-            theme="filled"
-          />
-        </a-popconfirm>
-      </a-tooltip>
-      <a-popover :title="i18n.customColumn || '自定义列'" trigger="click">
-        <div slot="content" style="width: 200px;" class="mr20">
-          <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
-            <a-checkbox
-              :indeterminate="indeterminate"
-              :checked="checkAll"
-              @change="onCheckAllChange"
-            >
-              {{ i18n.checkAll || "全选" }}
-            </a-checkbox>
-          </div>
-          <!-- 自定义列字段列表 -->
-          <a-checkbox-group v-model="checkedList" @change="onChange">
-            <a-row>
-              <a-col v-for="item in columns" :key="item.dataIndex" :span="12">
-                <a-checkbox
-                  :value="item.dataIndex"
-                  :disabled="item.checkDisabled"
-                  >{{ item.title }}</a-checkbox
-                >
-              </a-col>
-            </a-row>
-          </a-checkbox-group>
-        </div>
-        <a-icon class="pointer f18 mr20" type="menu" />
-      </a-popover>
+      <custom-columns
+        style="height: 18px;"
+        :columns="columns"
+        @update="_setTableKeys"
+        v-model="selectedColumns"
+      ></custom-columns>
+
       <a-tooltip>
         <template slot="title">
           {{ i18n.resetWidths || "恢复表格默认列宽度" }}
@@ -88,30 +30,6 @@
           @click="resetWidth()"
           type="column-width"
         />
-      </a-tooltip>
-      <a-tooltip>
-        <template slot="title">
-          {{ i18n.exportConfig || "导出配置" }}
-        </template>
-        <a-icon
-          class="mr20 pointer f18"
-          @click="downloadConfig()"
-          type="download"
-        />
-      </a-tooltip>
-      <a-tooltip>
-        <template slot="title">
-          {{ i18n.importConfig || "导入配置" }}
-        </template>
-        <a-upload
-          accept=".json"
-          name="file"
-          :multiple="false"
-          :before-upload="uploadConfig"
-          :show-upload-list="false"
-        >
-          <a-icon class="mr20 pointer f18" type="upload" />
-        </a-upload>
       </a-tooltip>
     </div>
 
@@ -184,9 +102,8 @@
 import NP from "number-precision";
 import CoinSelect from "@components/common/coinSelect";
 import { formatNum, deBonce, throttle, blob2json } from "@/tools";
-import { clearStorage, getStorage, KYELIST } from "@/tools/storage";
 import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
-import FileSaver from "file-saver";
+import CustomColumns from "@components/common/customColumns";
 
 // 当用户的自选为空时，使用内置默认的自选
 const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
@@ -209,7 +126,7 @@ NP.enableBoundaryChecking(false);
 
 export default {
   name: "market",
-  components: { CoinSelect },
+  components: { CustomColumns, CoinSelect },
   data() {
     this.components = {
       header: {
@@ -268,22 +185,9 @@ export default {
       }
     };
     return {
-      langList: [
-        {
-          name: "中文",
-          lang: "zh_CN"
-        },
-        {
-          name: "English",
-          lang: "en"
-        }
-      ],
-
       dataPool: {}, // 数据缓冲池
       isDev: process.env.NODE_ENV === "development",
       checkedList: [], // 选择的字段列表
-      indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
-      checkAll: false, // 是否全选所有字段
       loading: true, // 是否加载中
       selectedCoin: [], // 选择的币种  添加自选
 
@@ -294,6 +198,7 @@ export default {
 
       optionalCoins: [], // 当前自选的币种列表（包含缓存）
       marketList: [], // 自选的币种行情数据
+      selectedColumns: [],
       defColumns: [
         {
           title: "Coin",
@@ -454,20 +359,6 @@ export default {
       });
       return columns;
     },
-    // 选择显示的列 真正展示的列
-    selectedColumns() {
-      const columns = [];
-      this.columns.forEach(item => {
-        // 默认显示
-        if (
-          item.checkDisabled ||
-          this.checkedList.some(col => col === item.dataIndex)
-        ) {
-          columns.push(item);
-        }
-      });
-      return columns;
-    },
     indexStyle() {
       const arr = [];
       DEFAULTWIDTHS.forEach(item => {
@@ -498,19 +389,13 @@ export default {
       "_setMyCoinList",
       "_setTableKeys",
       "_setStickList",
-      "_setUpsColor",
       "_setBadgeCoin",
       "_setSortConfig",
-      "_setUserLang",
       "_setTableWidths"
     ]),
-    ...mapActions([
-      "_getCoinList",
-      "_getLanguageAll",
-      "_initCache",
-      "_importConfig"
-    ]),
+    ...mapActions(["_getCoinList", "_initCache"]),
     init() {
+      this.selectedColumns = this.columns.filter(item => item.checked);
       // 列宽度数值初始化处理，先判断缓存中有没有，没有就使用默认的配置
       const widths =
         this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
@@ -540,33 +425,6 @@ export default {
       }
       this.getOptional();
     },
-    // 导出配置文件
-    downloadConfig() {
-      getStorage(KYELIST).then(res => {
-        // 将json转换成字符串
-        const data = JSON.stringify(res, null, 2);
-        const blob = new Blob([data], { type: "" });
-        FileSaver.saveAs(blob, "Huobi_market_config.json");
-      });
-    },
-    // 导入配置文件
-    uploadConfig(file) {
-      // console.log(file);
-      const reader = new FileReader();
-      reader.readAsText(file);
-      reader.onload = event => {
-        // console.log(event);
-        try {
-          const data = JSON.parse(event.target.result);
-          this._importConfig(data);
-        } catch (e) {
-          console.log(e);
-          throw new Error(e);
-        }
-        // 检测是否导入成功
-      };
-      return false;
-    },
     // 恢复默认列宽度
     resetWidth() {
       this.defColumns.forEach(item => {
@@ -584,11 +442,6 @@ export default {
       });
       this._setTableWidths(arr);
     },
-    // 切换语言
-    langChange(val) {
-      this._setUserLang(val);
-      this._getLanguageAll();
-    },
     // 表格排序变化等
     onTableChange(pagination, filters, sorter) {
       const { order, columnKey } = sorter;
@@ -601,41 +454,6 @@ export default {
       } else {
         this._setSortConfig({});
       }
-    },
-    switchChange(e) {
-      this._setUpsColor(e);
-      // 通知角标重新初始化
-      chrome.runtime.sendMessage({
-        type: "refreshBadge"
-      });
-    },
-    clearLocalStorage() {
-      clearStorage().then(() => {
-        // this.$message.success(this.i18n.clearMsg || "清除成功, 下次打开生效");
-        // 通知角标重新初始化
-        chrome.runtime.sendMessage({
-          type: "refreshBadge"
-        });
-        location.reload();
-      });
-    },
-    // 自选列表变化
-    onChange(checkedList) {
-      this.indeterminate =
-        !!checkedList.length && checkedList.length < this.columns.length;
-      this.checkAll = checkedList.length === this.columns.length;
-      this._setTableKeys(checkedList);
-    },
-    // 自定义列全选所有字段
-    onCheckAllChange(e) {
-      Object.assign(this, {
-        checkedList: e.target.checked
-          ? this.columns.map(item => item.dataIndex)
-          : [],
-        indeterminate: false,
-        checkAll: e.target.checked
-      });
-      this._setTableKeys(this.checkedList);
     },
     // 保存自选到本地localStorage
     addOptional(list = []) {
