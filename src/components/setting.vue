@@ -25,6 +25,13 @@
         @back="showPage = false"
       ></configuration>
     </div>
+
+    <change-log
+      v-if="changeLogVisible"
+      :visible.sync="changeLogVisible"
+    ></change-log>
+
+    <support v-if="supportVisible" :visible.sync="supportVisible"></support>
   </div>
 </template>
 
@@ -32,14 +39,18 @@
 import { mapGetters, mapState } from "vuex";
 import Configuration from "@components/configuration";
 import { clearStorage } from "@tools/storage";
+import ChangeLog from "@components/dialog/changeLog";
+import Support from "@components/dialog/support";
 
 export default {
   name: "setting",
-  components: { Configuration },
+  components: { Support, ChangeLog, Configuration },
   data() {
     return {
       showPage: false,
-      settingVisible: false
+      settingVisible: false,
+      changeLogVisible: false,
+      supportVisible: false
     };
   },
   computed: {
@@ -71,14 +82,14 @@ export default {
         {
           name: "更新日志",
           icon: "rocket",
-          key: "rocket",
+          key: "changeLog",
           type: 2,
           url: ""
         },
         {
           name: "打赏作者",
           icon: "coffee",
-          key: "coffee",
+          key: "support",
           type: 2,
           url: ""
         },
@@ -107,24 +118,7 @@ export default {
       ];
     }
   },
-  created() {
-    this.getGitFile();
-  },
   methods: {
-    getGitFile() {
-      console.log("--------------");
-      // https://api.github.com/repos/[用户名]/[仓库名]/releases/latest
-      // https://api.github.com/repos/x2rr/funds/contents/src/common/changeLog.json
-      this.$http
-        .get("https://api.github.com/repos/jsonwu5/huobi-market/releases")
-        .then(res => {
-          console.log(res);
-          // const data = JSON.parse(
-          //   decodeURIComponent(escape(atob(res.content)))
-          // );
-          // console.log(data);
-        });
-    },
     clearLocalStorage() {
       clearStorage().then(() => {
         // this.$message.success(this.i18n.clearMsg || "清除成功, 下次打开生效");
@@ -157,6 +151,7 @@ export default {
           chrome.tabs.create({ url: item.url });
           break;
         case 2:
+          this[`${item.key}Visible`] = true;
           break;
         case 3:
           this[`${item.key}Visible`] = true;
