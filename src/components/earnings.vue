@@ -176,6 +176,19 @@ export default {
           checkDisabled: false, // 是否默认禁用
           title: "买入均价",
           align: "left",
+          dataIndex: "averagePrice",
+          customRender: val => {
+            // TODO 按币价来计算显示几位小数
+            return val !== "-" ? `$${NP.round(val, 2)}` : val;
+          },
+          sorter: (a, b) => a.averagePrice - b.averagePrice,
+          i18nKey: "colAveragePrice"
+        },
+        {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "成本价",
+          align: "left",
           dataIndex: "costPrice",
           customRender: val => {
             // TODO 按币价来计算显示几位小数
@@ -316,10 +329,12 @@ export default {
         const saleCostPrice = NP.divide(saleVolume, saleCount);
 
         // 买入均价（成本价） = N次买入的币总数量（已减去支付的手续费数量） / N次买入总数量
-        const costPrice = NP.divide(buyAmount, buyCount);
+        const buySveragePrice = NP.divide(buyAmount, buyCount);
 
         // 持有总量 = N次买入的币总数量 - N次卖出的币总数量
         const coinCount = NP.minus(buyCount, saleCount);
+        // 成本价 = （买入金额 - 盈亏金额）/ 持币数量
+        const costPrice = NP.divide(NP.minus(buyAmount, saleVolume), coinCount);
         // 当前持币总价值 = 持有总量 * 币价
         const totalNetValue = NP.times(coinCount, coinClose);
         // 总收益 = 当前持币总价值 + 卖出的总金额 - N次买入总金额(总成本)
@@ -347,6 +362,8 @@ export default {
           // 持有总量
           coinCount,
           // 买入均价
+          averagePrice: buySveragePrice,
+          // 成本价
           costPrice,
           // 持有价值
           totalNetValue,
