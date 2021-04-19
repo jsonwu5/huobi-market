@@ -43,7 +43,7 @@ export default {
   data() {
     return {
       zhCN: zhCN,
-      activeKey: "market"
+      activeKey: "earnings"
     };
   },
   computed: {
