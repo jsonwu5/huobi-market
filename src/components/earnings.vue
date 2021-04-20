@@ -234,7 +234,7 @@ export default {
           i18nKey: "colGains"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "今日收益",
           align: "left",
@@ -246,7 +246,7 @@ export default {
           i18nKey: "colTodayGains"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "涨跌幅",
           align: "left",
@@ -256,7 +256,7 @@ export default {
           i18nKey: "colTodayGainsUps"
         },
         {
-          checked: false, // 是否默认勾选
+          checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "总收益率",
           align: "left",
@@ -395,6 +395,7 @@ export default {
         close: "-",
         coinCount: "-",
         costPrice: "-",
+        averagePrice: "-",
         // 总价值
         totalNetValue: list.reduce((a, b) => NP.plus(a, b.totalNetValue), 0),
         // 总收益
@@ -475,8 +476,12 @@ export default {
         .shift()
         .split(",")
         .forEach(kItem => {
+          const haveKey = Object.prototype.hasOwnProperty.call(
+            keys,
+            kItem.replace(/"/g, "")
+          );
           // ""时间"" 去掉里面的双引号
-          columnKeys.push(keys[kItem.replace(/"/g, "")]);
+          columnKeys.push(haveKey ? keys[kItem.replace(/"/g, "")] : null);
         });
       // 2021-01-12 09:18:35,币币交易,USDT/HUSD,卖出,1.0003,310.0000,310.09300000,0.62018600HUSD,
       // 转换成
