@@ -7,20 +7,7 @@
   >
     <div class="flex ac">
       <a-tooltip>
-        <template slot="title">
-          {{ i18n.exportConfig || "导出Excel" }}
-        </template>
-        <a-icon
-          v-if="false"
-          class="mr20 pointer f18"
-          @click="downloadConfig()"
-          type="download"
-        />
-      </a-tooltip>
-      <a-tooltip>
-        <template slot="title">
-          {{ i18n.importConfig || "导入订单明细" }}
-        </template>
+        <template slot="title">导入订单明细</template>
         <a-upload
           accept=".csv"
           name="file"
@@ -32,8 +19,18 @@
         </a-upload>
       </a-tooltip>
       <custom-columns v-model="selectedColumns" :columns="columns"
-        ><a-button class="mb5">自定义列</a-button></custom-columns
+        ><a-button class="mb5 mr20">自定义列</a-button></custom-columns
       >
+      <a-button v-if="false" class="mb5 mr20" @click="openInTab"
+        >独立窗口打开</a-button
+      >
+      <a-dropdown>
+        <a-menu slot="overlay" @click="openInTab">
+          <a-menu-item key="1"> 以浏览器标签页打开 </a-menu-item>
+          <a-menu-item key="2"> 以独立窗口打开 </a-menu-item>
+        </a-menu>
+        <a-button class="mb5 mr20">独立窗口打开</a-button>
+      </a-dropdown>
     </div>
     <div class="mt10">
       <a-table
@@ -44,18 +41,18 @@
         :pagination="false"
         bordered
       >
+        <template slot="gains" slot-scope="value, row">
+          <a-tag :color="colorHandel(row.gains)">
+            <span>{{ `$${NP.round(row.gains, 2)}` }}</span>
+          </a-tag>
+        </template>
+        <template slot="todayGains" slot-scope="value, row">
+          <a-tag :color="colorHandel(row.todayGains)">
+            <span>{{ `$${NP.round(row.todayGains, 2)}` }}</span>
+          </a-tag>
+        </template>
         <template slot="todayGainsUps" slot-scope="value, row">
-          <a-tag
-            :color="
-              row.todayGainsUps >= 0
-                ? upsColor
-                  ? 'volcano'
-                  : 'green'
-                : upsColor
-                ? 'green'
-                : 'volcano'
-            "
-          >
+          <a-tag :color="colorHandel(row.todayGainsUps)">
             <span v-if="row.todayGainsUps">{{
               `${
                 row.todayGainsUps > 0
@@ -67,17 +64,7 @@
           </a-tag>
         </template>
         <template slot="gainsUps" slot-scope="value, row">
-          <a-tag
-            :color="
-              row.gainsUps >= 0
-                ? upsColor
-                  ? 'volcano'
-                  : 'green'
-                : upsColor
-                ? 'green'
-                : 'volcano'
-            "
-          >
+          <a-tag :color="colorHandel(row.gainsUps)">
             <span v-if="row.gainsUps">{{
               `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%`
             }}</span>
@@ -91,6 +78,7 @@
           v-if="value !== false"
         >
           <a-popconfirm
+            placement="left"
             title="确认要删除该币种分析数据吗"
             :ok-text="i18n.affirm || '确认'"
             :cancel-text="i18n.cancel || '取消'"
@@ -124,6 +112,7 @@ export default {
   components: { Record, CustomColumns },
   data() {
     return {
+      NP,
       visible: false,
       coinName: "",
       isDev: process.env.NODE_ENV === "development",
@@ -172,7 +161,7 @@ export default {
           i18nKey: "colCoinCount"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "买入均价",
           align: "left",
@@ -227,26 +216,28 @@ export default {
           title: "总收益",
           align: "left",
           dataIndex: "gains",
-          customRender: val => {
-            return `$${NP.round(val, 2)}`;
-          },
+          // customRender: val => {
+          //   return `$${NP.round(val, 2)}`;
+          // },
+          scopedSlots: { customRender: "gains" },
           sorter: (a, b) => a.gains - b.gains,
           i18nKey: "colGains"
         },
         {
-          checked: false, // 是否默认勾选
+          checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "今日收益",
           align: "left",
           dataIndex: "todayGains",
-          customRender: val => {
-            return `$${NP.round(val, 4)}`;
-          },
+          // customRender: val => {
+          //   return `$${NP.round(val, 2)}`;
+          // },
+          scopedSlots: { customRender: "todayGains" },
           sorter: (a, b) => a.todayGains - b.todayGains,
           i18nKey: "colTodayGains"
         },
         {
-          checked: false, // 是否默认勾选
+          checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "涨跌幅",
           align: "left",
@@ -278,7 +269,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["upsColor", "buySellRecords"]),
+    ...mapState(["upsColor", "buySellRecords", "manifest"]),
     ...mapGetters(["i18n"]),
     records() {
       let list = [];
@@ -339,15 +330,12 @@ export default {
         const totalNetValue = NP.times(coinCount, coinClose);
         // 总收益 = 当前持币总价值 + 卖出的总金额 - N次买入总金额(总成本)
         const gains = NP.minus(NP.plus(totalNetValue, saleAmount), buyAmount);
-        // 收益估算金额 当天的盈利金额 = 持币数量 * 最新价 - 持币数量 * 开盘价
-        const todayGains = NP.minus(
-          NP.times(coinClose, coinCount),
-          NP.times(coinOpen, coinCount)
-        );
-        // 收益日涨跌幅 = (持币数量 * 最新价 - 持币数量 * 开盘价) / 持币数量 * 开盘价
-        let todayGainsUps = NP.divide(
-          todayGains,
-          NP.times(coinOpen, coinCount)
+        // 收益估算金额 当天的盈利金额 = (最新价 - 开盘价) * 持有数量
+        const todayGains = NP.times(NP.minus(coinClose, coinOpen), coinCount);
+        // 收益日涨跌幅 = (最新价 - 成本价) / 成本价 - (开盘价 - 成本价) / 成本价
+        let todayGainsUps = NP.minus(
+          NP.divide(NP.minus(coinClose, costPrice), costPrice),
+          NP.divide(NP.minus(coinOpen, costPrice), costPrice)
         );
         todayGainsUps = NP.times(NP.round(todayGainsUps, 4), 100);
         // 单个币种总收益率 = 总收益 / N次买入总金额
@@ -426,6 +414,44 @@ export default {
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
     ...mapActions(["_deleteRecords", "_initCache"]),
+    openInTab(e) {
+      console.log(e, this.manifest.name);
+      // 以浏览器标签页打开
+      if (e.key === "1") {
+        chrome.tabs.create(
+          {
+            url: chrome.runtime.getURL("popup.html")
+          },
+          e => {
+            console.log(e);
+          }
+        );
+      } else {
+        // const name = this.manifest.name;
+        // 以独立窗口打开
+        chrome.windows.create(
+          {
+            url: chrome.runtime.getURL("popup.html"),
+            width: 830,
+            height: 550,
+            top: 200,
+            type: "popup"
+          },
+          e => {
+            console.log(e);
+          }
+        );
+      }
+    },
+    colorHandel(value) {
+      return value >= 0
+        ? this.upsColor
+          ? "volcano"
+          : "green"
+        : this.upsColor
+        ? "green"
+        : "volcano";
+    },
     openDetails(row) {
       this.coinName = row.name;
       this.visible = true;
@@ -550,7 +576,6 @@ export default {
       });
       return list;
     },
-    downloadConfig() {},
 
     reconnect() {
       console.log("尝试重连");
