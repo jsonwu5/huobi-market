@@ -1,27 +1,20 @@
 <template>
-  <div
-    class="index pl15 pt15 pr15"
-    :class="isDev ? 'pb15' : ''"
-    :style="indexStyle"
-  >
-    <!--币种选择器-->
-    <div class="flex ac mt5">
-      <coin-select v-if="coins.length" :coin.sync="selectedCoin"></coin-select>
-      <a-button class="ml10" @click="addOptional(selectedCoin)">{{
-        i18n.addOptional || "添加自选"
-      }}</a-button>
-    </div>
-
+  <div class="index pl15 pr15" :class="isDev ? 'pb15' : ''" :style="indexStyle">
     <!--功能按钮-->
     <div class="flex ac mt15">
       <custom-columns
         style="height: 18px;"
         :columns="columns"
-        @update="_setTableKeys"
+        placement="rightTop"
+        @setTableKeys="_setTableKeys"
         v-model="selectedColumns"
+        :checkedList.sync="checkedList"
       ></custom-columns>
 
-      <a-tooltip>
+      <a-tooltip
+        placement="topLeft"
+        :get-popup-container="e => e.parentElement"
+      >
         <template slot="title">
           {{ i18n.resetWidths || "恢复表格默认列宽度" }}
         </template>
@@ -31,6 +24,17 @@
           type="column-width"
         />
       </a-tooltip>
+
+      <!--币种选择器-->
+      <div class="flex ac">
+        <coin-select
+          v-if="coins.length"
+          :coin.sync="selectedCoin"
+        ></coin-select>
+        <a-button class="ml10" @click="addOptional(selectedCoin)">{{
+          i18n.addOptional || "添加自选"
+        }}</a-button>
+      </div>
     </div>
 
     <!--行情表格-->
@@ -69,7 +73,10 @@
           />
         </template>
         <div slot="action" slot-scope="value, row">
-          <a-tooltip>
+          <a-tooltip
+            placement="top"
+            :get-popup-container="e => e.parentElement"
+          >
             <template slot="title">
               {{ i18n.cancelOptional || "取消自选" }}
             </template>
@@ -81,7 +88,10 @@
               theme="filled"
             />
           </a-tooltip>
-          <a-tooltip>
+          <a-tooltip
+            placement="top"
+            :get-popup-container="e => e.parentElement"
+          >
             <template slot="title">
               {{ i18n.stick || "置顶" }}
             </template>

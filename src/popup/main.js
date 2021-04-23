@@ -6,6 +6,7 @@ import $http from "@/http";
 import filters from "@/tools/filters";
 import "../styles/style.less";
 import VueDraggableResizable from "vue-draggable-resizable";
+import { getStorage } from "@/tools/storage.js";
 
 Vue.component("vue-draggable-resizable", VueDraggableResizable);
 
@@ -18,8 +19,10 @@ Vue.use(Antd);
 // 注册全局过滤器
 Object.keys(filters).forEach(k => Vue.filter(k, filters[k]));
 
-// 全局属性iye
+// 全局属性
 Vue.prototype.$http = $http;
+// 方便在控制台查看缓存里的数据
+window.getStorage = getStorage;
 
 new Vue({
   store,
