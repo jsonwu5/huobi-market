@@ -6,7 +6,13 @@
     :class="isDev ? 'pb15' : ''"
   >
     <div class="flex ac">
-      <a-tooltip>
+      <custom-columns
+        v-model="selectedColumns"
+        :columns="columns"
+        placement="rightTop"
+        :checkedList.sync="checkedList"
+      ></custom-columns>
+      <a-tooltip placement="right" :get-popup-container="e => e.parentElement">
         <template slot="title">导入订单明细</template>
         <a-upload
           accept=".csv"
@@ -18,9 +24,6 @@
           <a-icon class="mr20 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
-      <custom-columns v-model="selectedColumns" :columns="columns">
-        <a-button class="mb5 mr20">自定义列</a-button>
-      </custom-columns>
     </div>
     <div class="mt10">
       <a-table
@@ -74,15 +77,23 @@
             :cancel-text="i18n.cancel || '取消'"
             @confirm="deleteCoinData(row)"
           >
-            <a-icon
-              class="pointer"
-              type="delete"
-              :style="{ fontSize: '18px', marginTop: '2px' }"
-              theme="filled"
-            />
+            <a-icon class="pointer f18" type="delete" theme="filled" />
           </a-popconfirm>
-          <span class="pointer" @click="openDetails(row)">详情</span>
+          <a-tooltip
+            placement="left"
+            :get-popup-container="e => e.parentElement"
+          >
+            <template slot="title">
+              加减仓详情
+            </template>
+            <a-icon
+              class="pointer f18"
+              @click="openDetails(row)"
+              type="profile"
+            />
+          </a-tooltip>
         </a-space>
+        <div slot="action" v-else>-</div>
       </a-table>
     </div>
 
@@ -116,6 +127,7 @@ export default {
       analysis: {}, // 更新需要使用到的数据 每N秒更新一次
 
       selectedColumns: [],
+      checkedList: [],
       columns: [
         {
           checked: true, // 是否默认勾选
@@ -123,7 +135,22 @@ export default {
           title: "Coin",
           align: "center",
           dataIndex: "name",
+          customRender: val => {
+            return val.toUpperCase();
+          },
           i18nKey: "colCoin"
+        },
+        {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "数量",
+          align: "left",
+          dataIndex: "coinCount",
+          customRender: val => {
+            return val !== "-" ? `${NP.round(val, 8)}` : val;
+          },
+          sorter: (a, b) => a.coinCount - b.coinCount,
+          i18nKey: "colCoinCount"
         },
         {
           checked: true,
@@ -141,14 +168,21 @@ export default {
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
-          title: "数量",
+          title: "成本价",
           align: "left",
-          dataIndex: "coinCount",
-          customRender: val => {
-            return val !== "-" ? `${NP.round(val, 2)}` : val;
+          dataIndex: "costPrice",
+          customRender: (val, row) => {
+            // 按币价来计算显示几位小数
+            if (row.close < 1) {
+              let str = String(row.close);
+              str = str.indexOf(".") > -1 ? str : `${str}.00`;
+              const ratio = str.split(".")[1].length;
+              return val !== "-" ? `$${NP.round(val, ratio)}` : val;
+            }
+            return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
-          sorter: (a, b) => a.coinCount - b.coinCount,
-          i18nKey: "colCoinCount"
+          sorter: (a, b) => a.costPrice - b.costPrice,
+          i18nKey: "colCostPrice"
         },
         {
           checked: false, // 是否默认勾选
@@ -156,25 +190,37 @@ export default {
           title: "买入均价",
           align: "left",
           dataIndex: "averagePrice",
-          customRender: val => {
-            // TODO 按币价来计算显示几位小数
+          customRender: (val, row) => {
+            // 按币价来计算显示几位小数
+            if (row.close < 1) {
+              let str = String(row.close);
+              str = str.indexOf(".") > -1 ? str : `${str}.00`;
+              const ratio = str.split(".")[1].length;
+              return val !== "-" ? `$${NP.round(val, ratio)}` : val;
+            }
             return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
           sorter: (a, b) => a.averagePrice - b.averagePrice,
           i18nKey: "colAveragePrice"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
-          title: "成本价",
+          title: "卖出均价",
           align: "left",
-          dataIndex: "costPrice",
-          customRender: val => {
-            // TODO 按币价来计算显示几位小数
+          dataIndex: "saleCostPrice",
+          customRender: (val, row) => {
+            // 按币价来计算显示几位小数
+            if (row.close < 1) {
+              let str = String(row.close);
+              str = str.indexOf(".") > -1 ? str : `${str}.00`;
+              const ratio = str.split(".")[1].length;
+              return val !== "-" ? `$${NP.round(val, ratio)}` : val;
+            }
             return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
-          sorter: (a, b) => a.costPrice - b.costPrice,
-          i18nKey: "colCostPrice"
+          sorter: (a, b) => a.saleCostPrice - b.saleCostPrice,
+          i18nKey: "colSaleCostPrice"
         },
         {
           checked: true, // 是否默认勾选
@@ -191,27 +237,14 @@ export default {
         {
           checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
-          title: "总成本",
+          title: "净成本",
           align: "left",
-          dataIndex: "buyAmount",
+          dataIndex: "flatCost",
           customRender: val => {
             return val !== "-" ? `$${NP.round(val, 2)}` : val;
           },
-          sorter: (a, b) => a.buyAmount - b.buyAmount,
-          i18nKey: "colBuyAmount"
-        },
-        {
-          checked: true, // 是否默认勾选
-          checkDisabled: false, // 是否默认禁用
-          title: "总收益",
-          align: "left",
-          dataIndex: "gains",
-          // customRender: val => {
-          //   return `$${NP.round(val, 2)}`;
-          // },
-          scopedSlots: { customRender: "gains" },
-          sorter: (a, b) => a.gains - b.gains,
-          i18nKey: "colGains"
+          sorter: (a, b) => a.flatCost - b.flatCost,
+          i18nKey: "colFlatCost"
         },
         {
           checked: true, // 是否默认勾选
@@ -229,12 +262,25 @@ export default {
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
-          title: "涨跌幅",
+          title: "日涨跌幅",
           align: "left",
           dataIndex: "todayGainsUps",
           scopedSlots: { customRender: "todayGainsUps" },
           sorter: (a, b) => a.todayGainsUps - b.todayGainsUps,
           i18nKey: "colTodayGainsUps"
+        },
+        {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "总收益",
+          align: "left",
+          dataIndex: "gains",
+          // customRender: val => {
+          //   return `$${NP.round(val, 2)}`;
+          // },
+          scopedSlots: { customRender: "gains" },
+          sorter: (a, b) => a.gains - b.gains,
+          i18nKey: "colGains"
         },
         {
           checked: true, // 是否默认勾选
@@ -267,8 +313,7 @@ export default {
         width: this.openType > 0 ? "100%" : "800px"
       };
     },
-    records() {
-      let list = [];
+    recordsByCoin() {
       const symbol = {};
       this.buySellRecords.forEach(item => {
         const key = item.symbol.split("/")[0];
@@ -277,19 +322,27 @@ export default {
         }
         symbol[key].push(item);
       });
-      // item = 币种名称（OXT） 是大写
-      Object.keys(symbol).forEach(item => {
-        const arr = symbol[item];
-        // {
-        //      时间: "created",
-        //     交易类型: "type",
-        //     交易对: "symbol",
-        //     方向: "role",
-        //     价格: "price",
-        //     数量: "amount",
-        //     成交额: "volume",
-        //     手续费: "points"
-        // }
+      return symbol;
+    },
+    records() {
+      let list = [];
+      Object.keys(this.recordsByCoin).forEach(item => {
+        const arr = this.recordsByCoin[item];
+        // item中的字段说明
+        //  {
+        //   amount: 520.1395,               // 数量
+        //   coin: "oxt",                    // 币种
+        //   created: "2021-04-23 10:37:00", // 时间
+        //   points: 1.040279,               // 手续费
+        //   pointsUnit: "oxt",              // 手续费币种
+        //   price: 0.5278,                  // 价格
+        //   realAmount: 519.099221,         // 减去手续费的实际数量
+        //   realVolume: 274.5296281,        // 减去手续费的实际成交额
+        //   role: "买入",                    // 方向
+        //   symbol: "oxt/usdt",             // 交易对
+        //   type: "币币交易",                 // 交易类型
+        //   volume: 274.5296281             // 成交额
+        // };
         const buy = arr.filter(a => a.role === "买入");
         const sale = arr.filter(a => a.role === "卖出");
         // 币种最新开盘价格数据包
@@ -301,34 +354,35 @@ export default {
         // 币种开盘价
         const coinOpen = res && res.tick ? res.tick.open : 0;
 
-        // N次买入的币总数量（已减去支付的手续费数量）
+        // N次买入的币总数量（减去手续费后的实际数量）
         const buyCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
+        // N次买入币总数量（含手续费）
+        const buyCounts = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
         // N次买入总金额
         const buyAmount = buy.reduce((a, b) => NP.plus(a, b.volume), 0);
 
         // N次卖出的币总数量
         const saleCount = sale.reduce((a, b) => NP.plus(a, b.realAmount), 0);
-        // N次卖出总金额（已减去支付的手续费金额）
+        // N次卖出总金额（减去手续费后的实际总金额）
         const saleAmount = sale.reduce((a, b) => NP.plus(a, b.realVolume), 0);
-        // N次卖出总金额
+        // N次卖出总金额（含手续费）
         const saleVolume = sale.reduce((a, b) => NP.plus(a, b.volume), 0);
-        // 卖出均价 = N次卖出总金额 / N次卖出总数量
+        // 卖出均价 = N次卖出总金额（含手续费） / N次卖出总数量
         const saleCostPrice = NP.divide(saleVolume, saleCount);
+        // 买入均价 = N次买入总金额 / N次买入币总数量（含手续费）
+        const buyAveragePrice = NP.divide(buyAmount, buyCounts);
 
-        // 买入均价（成本价） = N次买入的币总数量（已减去支付的手续费数量） / N次买入总数量
-        const buySveragePrice = NP.divide(buyAmount, buyCount);
-
-        // 持有总量 = N次买入的币总数量 - N次卖出的币总数量
+        // 持币数量 = N次买入的币总数量（减去手续费的实际数量） - N次卖出的币总数量
         const coinCount = NP.minus(buyCount, saleCount);
-        // 成本价 = （买入金额 - 盈亏金额）/ 持币数量
+        // 成本价 = （N次买入总金额 - N次卖出总金额（含手续费））/ 持币数量
         const costPrice = NP.divide(NP.minus(buyAmount, saleVolume), coinCount);
-        // 当前持币总价值 = 持有总量 * 币价
+        // 当前持币总价值 = 持币数量 * 币最新价
         const totalNetValue = NP.times(coinCount, coinClose);
-        // 总收益 = 当前持币总价值 + 卖出的总金额 - N次买入总金额(总成本)
+        // 总收益 = 当前持币总价值 + 卖出的总金额（减去手续费的实际金额） - N次买入总金额
         const gains = NP.minus(NP.plus(totalNetValue, saleAmount), buyAmount);
-        // 收益估算金额 当天的盈利金额 = (最新价 - 开盘价) * 持有数量
+        // 当天的收益估算金额 = (最新价 - 开盘价) * 持有数量
         const todayGains = NP.times(NP.minus(coinClose, coinOpen), coinCount);
-        // 收益日涨跌幅 = (最新价 - 成本价) / 成本价 - (开盘价 - 成本价) / 成本价
+        // 当天的收益涨跌幅 = (最新价 - 成本价) / 成本价 - (开盘价 - 成本价) / 成本价
         let todayGainsUps = NP.minus(
           NP.divide(NP.minus(coinClose, costPrice), costPrice),
           NP.divide(NP.minus(coinOpen, costPrice), costPrice)
@@ -337,16 +391,18 @@ export default {
         // 单个币种总收益率 = 总收益 / N次买入总金额
         let gainsUps = NP.round(NP.divide(gains, buyAmount), 4);
         gainsUps = NP.times(gainsUps, 100);
+        // 净成本 = 买入总金额 - N次卖出总金额（含手续费）
+        const flatCost = NP.minus(buyAmount, saleVolume);
 
         list.push({
           id: item,
           close: coinClose,
           tick: res.tick,
           name: item,
-          // 持有总量
+          // 持币数量
           coinCount,
           // 买入均价
-          averagePrice: buySveragePrice,
+          averagePrice: buyAveragePrice,
           // 成本价
           costPrice,
           // 持有价值
@@ -355,18 +411,18 @@ export default {
           gains,
           // 持币总收益率
           gainsUps,
-          // 收益估算金额 当天的盈利金额
+          // 当天的收益估算金额
           todayGains,
-          // 收益日涨跌幅
+          // 当天的收益涨跌幅
           todayGainsUps,
           // 卖出均价
           saleCostPrice,
-          // 买入总成本
-          buyAmount
+          // 净成本
+          flatCost
         });
       });
 
-      const totalAllCost = list.reduce((a, b) => NP.plus(a, b.buyAmount), 0);
+      const totalAllCost = list.reduce((a, b) => NP.plus(a, b.flatCost), 0);
       const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
       const totalTodayGains = list.reduce(
         (a, b) => NP.plus(a, b.todayGains),
@@ -384,18 +440,18 @@ export default {
         totalNetValue: list.reduce((a, b) => NP.plus(a, b.totalNetValue), 0),
         // 总收益
         gains: allGains,
-        // 今日所有币种收益率涨跌幅 = 今日总收益 / 总成本
+        // 今日所有币种收益率涨跌幅 = 今日总收益 / 总净成本
         todayGainsUps: NP.times(
           NP.round(NP.divide(totalTodayGains, totalAllCost), 4),
           100
         ),
         // 总收益率 = 总收益 / 总净成本
         gainsUps: NP.times(NP.round(NP.divide(allGains, totalAllCost), 4), 100),
-        // 今日收益
+        // 今日总收益
         todayGains: totalTodayGains,
         saleCostPrice: "-",
         // 总成本
-        buyAmount: list.reduce((a, b) => NP.plus(a, b.buyAmount), 0),
+        flatCost: totalAllCost,
         action: false
       });
       return list;

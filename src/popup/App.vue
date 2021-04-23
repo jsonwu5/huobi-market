@@ -61,7 +61,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["userLang", "openType"]),
+    ...mapState(["userLang", "openType", "manifest"]),
     ...mapGetters(["i18n"])
   },
   created() {
@@ -79,6 +79,13 @@ export default {
       }
       this._getManifest();
       this._getLanguageAll();
+
+      // 设置标签页/窗口标题
+      this.$nextTick(() => {
+        document.title = `${this.manifest.name || "火币行情助手"} - v${
+          this.manifest.version
+        }`;
+      });
     });
   },
   methods: {
