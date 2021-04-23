@@ -1,6 +1,10 @@
 <template>
   <div class="customColumns">
-    <a-popover :title="i18n.customColumn || '自定义列'" trigger="click">
+    <a-popover
+      :title="i18n.customColumn || '自定义列'"
+      trigger="click"
+      :placement="placement"
+    >
       <div slot="content" style="width: 200px;" class="mr20">
         <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
           <a-checkbox
@@ -12,7 +16,7 @@
           </a-checkbox>
         </div>
         <!-- 自定义列字段列表 -->
-        <a-checkbox-group v-model="checkedList" @change="onChange">
+        <a-checkbox-group :value="checkedList" @change="onChange">
           <a-row>
             <a-col v-for="item in columns" :key="item.dataIndex" :span="12">
               <a-checkbox
@@ -25,7 +29,15 @@
         </a-checkbox-group>
       </div>
       <slot>
-        <a-icon class="pointer f18 mr20" type="menu" />
+        <a-tooltip
+          placement="topLeft"
+          :get-popup-container="e => e.parentElement"
+        >
+          <template slot="title">
+            {{ i18n.customColumn || "自定义列" }}
+          </template>
+          <a-icon class="pointer f18 mr20" type="menu" />
+        </a-tooltip>
       </slot>
     </a-popover>
   </div>
@@ -50,12 +62,21 @@ export default {
     value: {
       type: Array,
       default: () => []
+    },
+    // 当前显示的字段列表
+    checkedList: {
+      type: Array,
+      default: () => []
+    },
+    // 弹出方向
+    placement: {
+      type: String,
+      default: "bottom"
     }
   },
   data() {
     return {
       indeterminate: true, // 设置 indeterminate 状态，只负责样式控制
-      checkedList: [], // 选择的字段列表
       checkAll: false // 是否全选所有字段
     };
   },
@@ -63,15 +84,34 @@ export default {
     ...mapGetters(["i18n"])
   },
   watch: {
-    value: {
-      handler() {
-        this.checkedList = [];
-        this.value.forEach(item => {
-          this.checkedList.push(item.dataIndex);
-        });
+    checkedList: {
+      handler(checkedList) {
+        let value = [];
+        // 监听当前显示的字段列表变化，然后通知table进行列调整
+        if (checkedList.length) {
+          this.columns.forEach(item => {
+            const isHave = checkedList.some(sItem => sItem === item.dataIndex);
+            item.checked = isHave;
+            if (isHave) {
+              value.push(item);
+            }
+          });
+        }
+        this.$emit("change", value);
       },
-      immediate: true
+      immediate: true,
+      deep: true
     }
+  },
+  created() {
+    let keys = [];
+    // 未指定要显示的字段时，从columns找设置了默认显示的字段
+    if (!this.checkedList.length) {
+      keys = this.columns
+        .filter(item => item.checked)
+        .map(item => item.dataIndex);
+    }
+    this.$emit("update:checkedList", keys);
   },
   methods: {
     // 自选列表变化
@@ -79,32 +119,34 @@ export default {
       this.indeterminate =
         !!checkedList.length && checkedList.length < this.columns.length;
       this.checkAll = checkedList.length === this.columns.length;
-      this.handleOk();
+      this.handleOk(checkedList);
     },
     // 自定义列全选所有字段
     onCheckAllChange(e) {
+      const checkedList = e.target.checked
+        ? this.columns.map(item => item.dataIndex)
+        : [];
       Object.assign(this, {
-        checkedList: e.target.checked
-          ? this.columns.map(item => item.dataIndex)
-          : [],
         indeterminate: false,
         checkAll: e.target.checked
       });
-      this.handleOk();
-      // this._setTableKeys(this.checkedList);
+      this.handleOk(checkedList);
     },
-    handleOk() {
-      const list = this.columns;
+    // 派发事件
+    handleOk(checkedList, isEmit = true) {
       const value = [];
-      list.forEach(item => {
-        const isHave = this.checkedList.some(sItem => sItem === item.dataIndex);
+      this.columns.forEach(item => {
+        const isHave = checkedList.some(sItem => sItem === item.dataIndex);
         item.checked = isHave;
         if (isHave) {
           value.push(item);
         }
       });
+      if (isEmit) {
+        this.$emit("update:checkedList", checkedList);
+        this.$emit("setTableKeys", checkedList);
+      }
       this.$emit("change", value);
-      this.$emit("update", this.checkedList);
     }
   }
 };
