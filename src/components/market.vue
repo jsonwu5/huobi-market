@@ -343,7 +343,8 @@ export default {
       "badgeCoin",
       "sortConfig",
       "userLang",
-      "tableWidths"
+      "tableWidths",
+      "openType"
     ]),
     ...mapGetters(["i18n"]),
     // 所有列数据 包含未展示的
@@ -374,7 +375,7 @@ export default {
       num = num < 420 ? 420 : num;
       return {
         // 根据表格字段动态设置页面的width
-        width: `${num}px`
+        width: this.openType > 0 ? "100%" : `${num}px`
       };
     }
   },
@@ -726,7 +727,6 @@ export default {
   overflow: auto;
   min-height: 300px;
   max-height: 600px;
-  max-width: 800px;
   transition: all 0.3s;
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {

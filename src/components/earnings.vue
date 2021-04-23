@@ -1,8 +1,8 @@
 <template>
   <!-- 收益统计 -->
   <div
-    class="earnings pl15 pt15 pr15 "
-    :style="visible ? 'height:530px' : ''"
+    class="earnings pl15 pt15 pr15"
+    :style="earningsStyles"
     :class="isDev ? 'pb15' : ''"
   >
     <div class="flex ac">
@@ -18,19 +18,9 @@
           <a-icon class="mr20 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
-      <custom-columns v-model="selectedColumns" :columns="columns"
-        ><a-button class="mb5 mr20">自定义列</a-button></custom-columns
-      >
-      <a-button v-if="false" class="mb5 mr20" @click="openInTab"
-        >独立窗口打开</a-button
-      >
-      <a-dropdown>
-        <a-menu slot="overlay" @click="openInTab">
-          <a-menu-item key="1"> 以浏览器标签页打开 </a-menu-item>
-          <a-menu-item key="2"> 以独立窗口打开 </a-menu-item>
-        </a-menu>
-        <a-button class="mb5 mr20">独立窗口打开</a-button>
-      </a-dropdown>
+      <custom-columns v-model="selectedColumns" :columns="columns">
+        <a-button class="mb5 mr20">自定义列</a-button>
+      </custom-columns>
     </div>
     <div class="mt10">
       <a-table
@@ -269,8 +259,14 @@ export default {
     };
   },
   computed: {
-    ...mapState(["upsColor", "buySellRecords", "manifest"]),
+    ...mapState(["upsColor", "buySellRecords", "manifest", "openType"]),
     ...mapGetters(["i18n"]),
+    earningsStyles() {
+      return {
+        height: this.visible ? "530px" : "auto",
+        width: this.openType > 0 ? "100%" : "800px"
+      };
+    },
     records() {
       let list = [];
       const symbol = {};
@@ -414,35 +410,6 @@ export default {
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
     ...mapActions(["_deleteRecords", "_initCache"]),
-    openInTab(e) {
-      console.log(e, this.manifest.name);
-      // 以浏览器标签页打开
-      if (e.key === "1") {
-        chrome.tabs.create(
-          {
-            url: chrome.runtime.getURL("popup.html")
-          },
-          e => {
-            console.log(e);
-          }
-        );
-      } else {
-        // const name = this.manifest.name;
-        // 以独立窗口打开
-        chrome.windows.create(
-          {
-            url: chrome.runtime.getURL("popup.html"),
-            width: 830,
-            height: 550,
-            top: 200,
-            type: "popup"
-          },
-          e => {
-            console.log(e);
-          }
-        );
-      }
-    },
     colorHandel(value) {
       return value >= 0
         ? this.upsColor
@@ -678,12 +645,9 @@ export default {
 
 <style lang="less">
 .earnings {
-  overflow: auto;
+  overflow-y: auto;
   min-height: 300px;
-  max-height: 600px;
-  max-width: 800px;
   transition: all 0.3s;
-  width: 800px;
   .ant-table-thead > tr > th,
   .ant-table-tbody > tr > td {
     padding: 5px;

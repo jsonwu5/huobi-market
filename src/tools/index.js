@@ -144,3 +144,16 @@ export function blob2json(e, callback) {
     callback && callback(JSON.parse(msg));
   };
 }
+
+/**
+ * 根据key获取url上的值
+ * @param key { String } 键名
+ * @param url { String } 带参数的url
+ * @returns {string|null}
+ */
+export function getQueryString(key, url = "") {
+  const href = url ? url : window.location.href;
+  const reg = new RegExp("[?&]" + key + "=([^&]*)", "i");
+  const string = reg.exec(href);
+  return string ? string[1] : null;
+}

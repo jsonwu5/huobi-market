@@ -36,7 +36,9 @@ export default new Vuex.Store({
     // 表格列宽度缓存
     tableWidths: [],
     // 现货买卖记录
-    buySellRecords: []
+    buySellRecords: [],
+    // 以什么方式打开插件0 = 插件popup页面 1 = 浏览器标签页 2 = 独立窗口页面
+    openType: 0
   },
   getters: {
     i18n: state => {
@@ -100,6 +102,9 @@ export default new Vuex.Store({
     _setBuySellRecords(state, val) {
       state.buySellRecords = val;
       setStorage({ buySellRecords: val });
+    },
+    _setOpenType(state, val) {
+      state.openType = val;
     }
   },
   actions: {

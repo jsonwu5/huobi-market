@@ -54,7 +54,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["manifest", "userLang"]),
+    ...mapState(["manifest", "userLang", "openType"]),
     ...mapGetters(["i18n"]),
     list() {
       return [
@@ -166,10 +166,12 @@ export default {
 <style scoped lang="less">
 .setting {
   overflow: auto;
-  min-width: 380px;
   min-height: 500px;
-  max-height: 500px;
-  max-width: 800px;
+  //max-height: 500px;
+  min-width: 380px;
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
   transition: all 0.3s;
   background-color: #f5f5f5;
   .githubBtn {
