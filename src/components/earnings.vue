@@ -32,6 +32,7 @@
       :dataSource="records"
       :rowKey="record => record.id"
       :pagination="false"
+      :scroll="{ y: scrollHeight }"
       bordered
     >
       <template slot="gains" slot-scope="value, row">
@@ -312,10 +313,20 @@ export default {
   computed: {
     ...mapState(["upsColor", "buySellRecords", "manifest", "openType"]),
     ...mapGetters(["i18n"]),
+    scrollHeight() {
+      return this.openType === 0 ? 400 : document.body.clientHeight - 200;
+    },
     earningsStyles() {
+      // 当前是否显示了滚动条
+      // const hasScrollbar =
+      //   document.body.scrollHeight >
+      //   (window.innerHeight || document.documentElement.clientHeight);
+      // // 滚动条宽度
+      const scrollWidth = window.innerWidth - document.body.clientWidth;
       return {
         height: this.visible ? "530px" : "auto",
-        width: this.openType > 0 ? "100%" : "calc(800px - 20px)"
+        width:
+          this.openType > 0 ? "100%" : `calc(800px - ${20 + scrollWidth}px)`
       };
     },
     recordsByCoin() {
