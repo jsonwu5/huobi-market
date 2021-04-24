@@ -110,7 +110,7 @@
 import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
 import { blob2json, throttle } from "@tools";
-import Record from "@components/common/record";
+import Record from "@components/dialog/record";
 import CustomColumns from "@components/common/customColumns";
 
 export default {
