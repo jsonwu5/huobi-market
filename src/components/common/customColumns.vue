@@ -5,7 +5,7 @@
       trigger="click"
       :placement="placement"
     >
-      <div slot="content" style="width: 200px;" class="mr20">
+      <div slot="content" style="width: 200px;">
         <div class="mb5" :style="{ borderBottom: '1px solid #E9E9E9' }">
           <a-checkbox
             :indeterminate="indeterminate"
@@ -36,7 +36,7 @@
           <template slot="title">
             {{ i18n.customColumn || "自定义列" }}
           </template>
-          <a-icon class="pointer f18 mr20" type="menu" />
+          <a-icon class="pointer f18" type="menu" />
         </a-tooltip>
       </slot>
     </a-popover>

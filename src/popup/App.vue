@@ -35,9 +35,11 @@
         </a-dropdown>
       </div>
 
-      <market v-if="activeKey === 'market'" />
-      <earnings v-if="activeKey === 'earnings'"></earnings>
-      <setting v-if="activeKey === 'setting'"></setting>
+      <div class="pt10 pb10 pr10 pl10">
+        <market v-if="activeKey === 'market'" />
+        <earnings v-if="activeKey === 'earnings'"></earnings>
+        <setting v-if="activeKey === 'setting'"></setting>
+      </div>
     </div>
   </a-config-provider>
 </template>
@@ -127,10 +129,17 @@ export default {
   transition: all 0.3s;
   .tabs {
     border-bottom: 1px solid #e8e8e8;
+    background-color: white;
   }
   /deep/ .ant-tabs-bar {
     margin: 0;
     border-bottom: none;
   }
+}
+</style>
+<style lang="less">
+.app {
+  height: 100%;
+  background-color: #f8f8f8;
 }
 </style>

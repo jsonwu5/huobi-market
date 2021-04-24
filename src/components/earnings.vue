@@ -1,12 +1,13 @@
 <template>
   <!-- 收益统计 -->
   <div
-    class="earnings pl15 pt15 pr15"
+    class="earnings pl15 pr15"
+    :class="isDev ? 'pb30' : 'pb15'"
     :style="earningsStyles"
-    :class="isDev ? 'pb15' : ''"
   >
-    <div class="flex ac">
+    <div class="flex ac pb10 pt10">
       <custom-columns
+        class="mr15"
         v-model="selectedColumns"
         :columns="columns"
         placement="rightTop"
@@ -21,81 +22,85 @@
           :before-upload="uploadConfig"
           :show-upload-list="false"
         >
-          <a-icon class="mr20 pointer f18" type="upload" />
+          <a-icon class="mr15 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
     </div>
-    <div class="mt10">
-      <a-table
-        :loading="loading"
-        :columns="selectedColumns"
-        :dataSource="records"
-        :rowKey="record => record.id"
-        :pagination="false"
-        bordered
+    <a-table
+      :loading="loading"
+      :columns="selectedColumns"
+      :dataSource="records"
+      :rowKey="record => record.id"
+      :pagination="false"
+      bordered
+    >
+      <template slot="gains" slot-scope="value, row">
+        <a-tag :color="colorHandel(row.gains)">
+          <span>{{ `$${NP.round(row.gains, 2)}` }}</span>
+        </a-tag>
+      </template>
+      <template slot="todayGains" slot-scope="value, row">
+        <a-tag :color="colorHandel(row.todayGains)">
+          <span>{{ `$${NP.round(row.todayGains, 2)}` }}</span>
+        </a-tag>
+      </template>
+      <template slot="todayGainsUps" slot-scope="value, row">
+        <a-tag :color="colorHandel(row.todayGainsUps)">
+          <span v-if="row.todayGainsUps">{{
+            `${
+              row.todayGainsUps > 0
+                ? "+" + row.todayGainsUps
+                : row.todayGainsUps
+            }%`
+          }}</span>
+          <span v-else>0%</span>
+        </a-tag>
+      </template>
+      <template slot="gainsUps" slot-scope="value, row">
+        <a-tag :color="colorHandel(row.gainsUps)">
+          <span v-if="row.gainsUps">{{
+            `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%`
+          }}</span>
+          <span v-else>0%</span>
+        </a-tag>
+      </template>
+      <a-space
+        slot="action"
+        align="center"
+        slot-scope="value, row"
+        v-if="value !== false"
       >
-        <template slot="gains" slot-scope="value, row">
-          <a-tag :color="colorHandel(row.gains)">
-            <span>{{ `$${NP.round(row.gains, 2)}` }}</span>
-          </a-tag>
-        </template>
-        <template slot="todayGains" slot-scope="value, row">
-          <a-tag :color="colorHandel(row.todayGains)">
-            <span>{{ `$${NP.round(row.todayGains, 2)}` }}</span>
-          </a-tag>
-        </template>
-        <template slot="todayGainsUps" slot-scope="value, row">
-          <a-tag :color="colorHandel(row.todayGainsUps)">
-            <span v-if="row.todayGainsUps">{{
-              `${
-                row.todayGainsUps > 0
-                  ? "+" + row.todayGainsUps
-                  : row.todayGainsUps
-              }%`
-            }}</span>
-            <span v-else>0%</span>
-          </a-tag>
-        </template>
-        <template slot="gainsUps" slot-scope="value, row">
-          <a-tag :color="colorHandel(row.gainsUps)">
-            <span v-if="row.gainsUps">{{
-              `${row.gainsUps > 0 ? "+" + row.gainsUps : row.gainsUps}%`
-            }}</span>
-            <span v-else>0%</span>
-          </a-tag>
-        </template>
-        <a-space
-          slot="action"
-          align="center"
-          slot-scope="value, row"
-          v-if="value !== false"
+        <a-popconfirm
+          placement="left"
+          title="确认要删除该币种分析数据吗"
+          :ok-text="i18n.affirm || '确认'"
+          :cancel-text="i18n.cancel || '取消'"
+          @confirm="deleteCoinData(row)"
         >
-          <a-popconfirm
-            placement="left"
-            title="确认要删除该币种分析数据吗"
-            :ok-text="i18n.affirm || '确认'"
-            :cancel-text="i18n.cancel || '取消'"
-            @confirm="deleteCoinData(row)"
-          >
-            <a-icon class="pointer f18" type="delete" theme="filled" />
-          </a-popconfirm>
           <a-tooltip
             placement="left"
             :get-popup-container="e => e.parentElement"
           >
             <template slot="title">
-              加减仓详情
+              删除该币种加减仓数据
             </template>
-            <a-icon
-              class="pointer f18"
-              @click="openDetails(row)"
-              type="profile"
-            />
+            <a-icon class="pointer f18" type="delete" theme="filled" />
           </a-tooltip>
-        </a-space>
-        <div slot="action" v-else>-</div>
-      </a-table>
-    </div>
+        </a-popconfirm>
+
+        <a-tooltip placement="left" :get-popup-container="e => e.parentElement">
+          <template slot="title">
+            加减仓详情
+          </template>
+          <a-icon
+            class="pointer f18"
+            @click="openDetails(row)"
+            type="profile"
+          />
+        </a-tooltip>
+      </a-space>
+      <div slot="action" v-else>-</div>
+    </a-table>
 
     <record v-if="visible" v-model="visible" :coin="coinName"></record>
   </div>
@@ -310,7 +315,7 @@ export default {
     earningsStyles() {
       return {
         height: this.visible ? "530px" : "auto",
-        width: this.openType > 0 ? "100%" : "800px"
+        width: this.openType > 0 ? "100%" : "calc(800px - 20px)"
       };
     },
     recordsByCoin() {
@@ -699,16 +704,18 @@ export default {
 };
 </script>
 
-<style lang="less">
+<style scoped lang="less">
 .earnings {
   overflow-y: auto;
   min-height: 300px;
   transition: all 0.3s;
-  .ant-table-thead > tr > th,
-  .ant-table-tbody > tr > td {
+  background-color: white;
+  border-radius: 4px;
+  /deep/ .ant-table-thead > tr > th,
+  /deep/ .ant-table-tbody > tr > td {
     padding: 5px;
   }
-  .ant-space-item {
+  /deep/ .ant-space-item {
     display: flex;
     align-content: center;
     justify-content: center;

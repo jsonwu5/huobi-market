@@ -1,9 +1,14 @@
 <template>
-  <div class="index pl15 pr15" :class="isDev ? 'pb15' : ''" :style="indexStyle">
+  <div
+    class="index pl15 pr15 pt15"
+    :class="isDev ? 'pb30' : 'pb15'"
+    :style="indexStyle"
+  >
     <!--功能按钮-->
-    <div class="flex ac mt15">
+    <div class="func flex ac mb15">
       <custom-columns
         style="height: 18px;"
+        class="mr15"
         :columns="columns"
         placement="rightTop"
         @setTableKeys="_setTableKeys"
@@ -19,7 +24,7 @@
           {{ i18n.resetWidths || "恢复表格默认列宽度" }}
         </template>
         <a-icon
-          class="mr20 pointer f18"
+          class="mr15 pointer f18"
           @click="resetWidth()"
           type="column-width"
         />
@@ -38,73 +43,65 @@
     </div>
 
     <!--行情表格-->
-    <div class="mt15">
-      <a-table
-        :loading="loading"
-        :columns="selectedColumns"
-        :dataSource="marketList"
-        :rowKey="record => record.id"
-        :pagination="false"
-        @change="onTableChange"
-        :components="components"
-        bordered
-      >
-        <template slot="ups" slot-scope="value, row">
-          <a-tag
-            :color="
-              row.ups >= 0
-                ? upsColor
-                  ? 'volcano'
-                  : 'green'
-                : upsColor
-                ? 'green'
-                : 'volcano'
-            "
-          >
-            {{ `${row.ups > 0 ? "+" + row.ups : row.ups}%` }}
-          </a-tag>
-        </template>
-        <template slot="badge" slot-scope="badge, row">
-          <a-switch
-            :checked-children="i18n.switchOn || '开'"
-            :un-checked-children="i18n.switchOff || '关'"
-            :checked="badge"
-            @change="badgeChange($event, row)"
+    <a-table
+      :loading="loading"
+      :columns="selectedColumns"
+      :dataSource="marketList"
+      :rowKey="record => record.id"
+      :pagination="false"
+      @change="onTableChange"
+      :components="components"
+      bordered
+    >
+      <template slot="ups" slot-scope="value, row">
+        <a-tag
+          :color="
+            row.ups >= 0
+              ? upsColor
+                ? 'volcano'
+                : 'green'
+              : upsColor
+              ? 'green'
+              : 'volcano'
+          "
+        >
+          {{ `${row.ups > 0 ? "+" + row.ups : row.ups}%` }}
+        </a-tag>
+      </template>
+      <template slot="badge" slot-scope="badge, row">
+        <a-switch
+          :checked-children="i18n.switchOn || '开'"
+          :un-checked-children="i18n.switchOff || '关'"
+          :checked="badge"
+          @change="badgeChange($event, row)"
+        />
+      </template>
+      <div slot="action" slot-scope="value, row">
+        <a-tooltip placement="top" :get-popup-container="e => e.parentElement">
+          <template slot="title">
+            {{ i18n.cancelOptional || "取消自选" }}
+          </template>
+          <a-icon
+            class="pointer"
+            @click="delOptional(row)"
+            type="star"
+            :style="{ fontSize: '18px' }"
+            theme="filled"
           />
-        </template>
-        <div slot="action" slot-scope="value, row">
-          <a-tooltip
-            placement="top"
-            :get-popup-container="e => e.parentElement"
-          >
-            <template slot="title">
-              {{ i18n.cancelOptional || "取消自选" }}
-            </template>
-            <a-icon
-              class="pointer"
-              @click="delOptional(row)"
-              type="star"
-              :style="{ fontSize: '18px' }"
-              theme="filled"
-            />
-          </a-tooltip>
-          <a-tooltip
-            placement="top"
-            :get-popup-container="e => e.parentElement"
-          >
-            <template slot="title">
-              {{ i18n.stick || "置顶" }}
-            </template>
-            <a-icon
-              class="pointer ml5"
-              @click="stickOptional(row)"
-              type="vertical-align-top"
-              :style="{ fontSize: '20px' }"
-            />
-          </a-tooltip>
-        </div>
-      </a-table>
-    </div>
+        </a-tooltip>
+        <a-tooltip placement="top" :get-popup-container="e => e.parentElement">
+          <template slot="title">
+            {{ i18n.stick || "置顶" }}
+          </template>
+          <a-icon
+            class="pointer ml5"
+            @click="stickOptional(row)"
+            type="vertical-align-top"
+            :style="{ fontSize: '20px' }"
+          />
+        </a-tooltip>
+      </div>
+    </a-table>
   </div>
 </template>
 
@@ -383,9 +380,10 @@ export default {
       num = num + 30; // +30 是把左右内边距算进去
       num = num > 800 ? 800 : num;
       num = num < 420 ? 420 : num;
+      num = num === 800 ? `calc(${800}px - 20px)` : `${num}px`;
       return {
         // 根据表格字段动态设置页面的width
-        width: this.openType > 0 ? "100%" : `${num}px`
+        width: this.openType > 0 ? "100%" : num
       };
     }
   },
@@ -757,6 +755,8 @@ export default {
 </style>
 <style lang="less" scoped>
 .index {
+  background-color: white;
+  border-radius: 4px;
   /deep/ .ant-switch {
     background-color: #39c38c;
   }
