@@ -25,7 +25,7 @@
         <a-dropdown>
           <a-menu slot="overlay" @click="openInTab">
             <a-menu-item key="1" v-if="openType !== 1">
-              以浏览器标签页打开
+              在标签页中打开
             </a-menu-item>
             <a-menu-item key="2" v-if="openType !== 2">
               以独立窗口打开
@@ -109,8 +109,8 @@ export default {
         chrome.windows.create(
           {
             url: `${chrome.runtime.getURL("popup.html")}?openType=${e.key}`,
-            width: 830,
-            height: 550,
+            width: 900,
+            height: 600,
             top: 200,
             type: "popup"
           },
