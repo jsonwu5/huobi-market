@@ -95,3 +95,37 @@ const initBadge = () => {
 
 // 初始化
 initBadge();
+
+chrome.contextMenus.create({
+  title: "在标签页中打开",
+  contexts: ["browser_action"],
+  onclick: () => {
+    chrome.tabs.create(
+      {
+        url: `${chrome.runtime.getURL("popup.html")}?openType=1`
+      },
+      e => {
+        console.log(e);
+      }
+    );
+  }
+});
+
+chrome.contextMenus.create({
+  title: "以独立窗口打开",
+  contexts: ["browser_action"],
+  onclick: () => {
+    chrome.windows.create(
+      {
+        url: `${chrome.runtime.getURL("popup.html")}?openType=2`,
+        width: 900,
+        height: 600,
+        top: 200,
+        type: "popup"
+      },
+      e => {
+        console.log(e);
+      }
+    );
+  }
+});
