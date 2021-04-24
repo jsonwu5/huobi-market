@@ -1,6 +1,6 @@
 <template>
   <div class="setting relative">
-    <div class="list mt20">
+    <div class="list">
       <div v-for="(item, index) in list" :key="item.key">
         <div v-if="index === list.length - 2" class="interval"></div>
         <div
@@ -166,10 +166,8 @@ export default {
 <style scoped lang="less">
 .setting {
   overflow: auto;
-  min-height: 500px;
-  //max-height: 500px;
   min-width: 380px;
-  max-width: 500px;
+  max-width: 600px;
   width: 100%;
   margin: 0 auto;
   transition: all 0.3s;
@@ -182,6 +180,7 @@ export default {
     background-color: #f5f5f5;
     .item {
       background-color: white;
+      border-radius: 4px;
     }
     .interval {
       background-color: #f5f5f5;
