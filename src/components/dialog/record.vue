@@ -1,30 +1,41 @@
 <template>
   <a-modal
     title="加减仓详情"
-    wrapClassName="record"
+    wrapClassName="record-modal"
     :visible="visible"
     centered
     @cancel="close()"
     :footer="null"
     width="calc(100% - 30px)"
   >
-    <div class="width-100 pb15 pl15 pr15">
-      <custom-columns
-        class="mt15 mb15"
-        v-model="selectedColumns"
-        :columns="columns"
-        placement="rightTop"
-        :checkedList.sync="checkedList"
-      ></custom-columns>
+    <div class="record width-100 pb15 pl15 pr15">
+      <div class="flex ac mt15 flex-wrap">
+        <custom-columns
+          class="mr15 mb15"
+          v-model="selectedColumns"
+          :columns="columns"
+          placement="rightTop"
+          :checkedList.sync="checkedList"
+          style="margin-top: 2px"
+        ></custom-columns>
+        <div class="mr15 mb15">合计：{{ calcData.totalCount }}</div>
+        <div class="mr15 mb15">加仓次数：{{ calcData.buyCount }}</div>
+        <div class="mr15 mb15">减仓次数：{{ calcData.saleCount }}</div>
+        <div class="mr15 mb15">累计加仓金额：{{ calcData.buyMoney }}</div>
+        <div class="mr15 mb15">累计减仓金额：{{ calcData.saleNumber }}</div>
+        <div class="mr15 mb15">累计加仓数量：{{ calcData.buyCoinCount }}</div>
+        <div class="mr15 mb15">累计减仓数量：{{ calcData.saleCoinCount }}</div>
+        <div class="mr15 mb15">当前持仓数量：{{ calcData.totalCoinCount }}</div>
+      </div>
 
       <a-table
         :pagination="false"
         :columns="selectedColumns"
         :dataSource="data"
         :rowKey="(record, index) => index"
-        :scroll="{ y: 300 }"
+        :scroll="{ y: scrollHeight }"
+        :rowClassName="rowClassName"
         bordered
-        centered
       >
         <template slot-scope="text, row, index" slot="index">
           <span>{{ index + 1 }}</span>
@@ -69,6 +80,7 @@
 <script>
 import { mapGetters, mapState, mapMutations } from "vuex";
 import CustomColumns from "@components/common/customColumns";
+import NP from "number-precision";
 
 export default {
   name: "record",
@@ -92,6 +104,9 @@ export default {
       columnsVisible: false,
       selectedColumns: [],
       checkedList: [],
+      rowClassName: row => {
+        return row.role === "买入" ? "buyBgColor" : "saleBgColor";
+      },
       columns: [
         {
           checked: true, // 是否默认勾选
@@ -100,7 +115,6 @@ export default {
           align: "center",
           dataIndex: "index",
           width: 60,
-          // fixed: "left",
           scopedSlots: { customRender: "index" },
           i18nKey: "colIndex"
         },
@@ -108,7 +122,7 @@ export default {
           checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "交易类型",
-          align: "center",
+          align: "right",
           ellipsis: true,
           width: 100,
           dataIndex: "type",
@@ -118,9 +132,12 @@ export default {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "交易对",
-          align: "center",
+          align: "right",
           ellipsis: true,
-          width: 75,
+          width: 100,
+          customRender: val => {
+            return `${val.toUpperCase()}`;
+          },
           dataIndex: "symbol",
           i18nKey: "colSymbol"
         },
@@ -132,46 +149,52 @@ export default {
           ellipsis: true,
           width: 50,
           dataIndex: "role",
+          sorter: (a, b) => a.role.charCodeAt() - b.role.charCodeAt(),
           i18nKey: "colRole"
         },
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "价格",
-          align: "center",
+          align: "right",
           ellipsis: true,
           width: 100,
           dataIndex: "price",
+          sorter: (a, b) => a.price - b.price,
           i18nKey: "colPrice"
         },
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "数量",
-          align: "center",
+          align: "right",
           ellipsis: true,
           width: 100,
           dataIndex: "realAmount",
+          sorter: (a, b) => a.realAmount - b.realAmount,
           i18nKey: "colRealAmount"
         },
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "成交额",
-          align: "center",
+          align: "right",
           ellipsis: true,
-          // width: 100,
           dataIndex: "realVolume",
+          sorter: (a, b) => a.realVolume - b.realVolume,
           i18nKey: "colRealVolume"
         },
         {
           checked: true, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "手续费",
-          align: "center",
+          align: "right",
           ellipsis: true,
-          // width: 100,
+          customRender: (val, row) => {
+            return `${val} ${row.pointsUnit.toUpperCase()}`;
+          },
           dataIndex: "points",
+          sorter: (a, b) => a.points - b.points,
           i18nKey: "colPoints"
         },
         {
@@ -180,8 +203,9 @@ export default {
           title: "时间",
           align: "center",
           ellipsis: true,
-          // width: 50,
           dataIndex: "created",
+          sorter: (a, b) =>
+            new Date(a.created).getTime() - new Date(b.created).getTime(),
           i18nKey: "colTime"
         },
         {
@@ -198,13 +222,33 @@ export default {
     };
   },
   computed: {
-    ...mapState(["buySellRecords"]),
+    ...mapState(["buySellRecords", "openType"]),
     ...mapGetters(["i18n"]),
+    scrollHeight() {
+      return this.openType === 0 ? 300 : document.body.clientHeight;
+    },
     records() {
       return this.buySellRecords.map((item, index) => ({ ...item, index }));
     },
     list() {
       return this.records.filter(item => item.coin === this.coin);
+    },
+    calcData() {
+      const buy = this.list.filter(item => item.role === "买入");
+      const sale = this.list.filter(item => item.role === "卖出");
+
+      const buyCoinCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
+      const saleCoinCount = sale.reduce((a, b) => NP.plus(a, b.realAmount), 0);
+      return {
+        buyCount: buy.length,
+        saleCount: sale.length,
+        totalCount: this.list.length,
+        buyMoney: buy.reduce((a, b) => NP.plus(a, b.realVolume), 0),
+        saleNumber: sale.reduce((a, b) => NP.plus(a, b.realVolume), 0),
+        buyCoinCount,
+        saleCoinCount,
+        totalCoinCount: NP.minus(buyCoinCount, saleCoinCount)
+      };
     }
   },
   created() {
@@ -226,8 +270,18 @@ export default {
 };
 </script>
 
-<style lang="less">
+<style scoped lang="less">
 .record {
+  /deep/ .buyBgColor {
+    background-color: rgba(255, 112, 75, 0.15);
+  }
+  /deep/ .saleBgColor {
+    background-color: rgba(57, 195, 140, 0.15);
+  }
+}
+</style>
+<style lang="less">
+.record-modal {
   .ant-modal-body {
     padding: 5px;
   }
