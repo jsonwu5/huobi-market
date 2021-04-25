@@ -1,6 +1,6 @@
 {
   "name": "huobi-market",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "description": "A Huobi market Browser Extension",
   "author": "JasonWu <ilovecqr@gmail.com>",
