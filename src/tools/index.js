@@ -157,3 +157,29 @@ export function getQueryString(key, url = "") {
   const string = reg.exec(href);
   return string ? string[1] : null;
 }
+
+/**
+ * 分页获取数据
+ * @param list { Array } 数据源
+ * @param pageNumber { Number } 页码
+ * @param resultSize { Number } 每页条数
+ * @returns {Promise<unknown>}
+ */
+export function getDataByPage(list, { pageNumber, resultSize }) {
+  let res = {
+    // 1 10  0 10
+    // 2 10  10 20
+    // 3 10 20 30
+    list: list.slice(
+      (pageNumber - 1) * resultSize,
+      (pageNumber - 1) * resultSize + resultSize
+    ),
+    total: list.length
+  };
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      clearTimeout(timer);
+      resolve(res);
+    }, 100);
+  });
+}

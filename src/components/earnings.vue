@@ -35,6 +35,9 @@
       :scroll="{ y: scrollHeight }"
       bordered
     >
+      <template slot-scope="text, row, index" slot="index">
+        <span>{{ index + 1 }}</span>
+      </template>
       <template slot="gains" slot-scope="value, row">
         <a-tag :color="colorHandel(row.gains)">
           <span>{{ `$${NP.round(row.gains, 2)}` }}</span>
@@ -135,6 +138,16 @@ export default {
       selectedColumns: [],
       checkedList: [],
       columns: [
+        {
+          checked: true, // 是否默认勾选
+          checkDisabled: false, // 是否默认禁用
+          title: "序号",
+          align: "center",
+          dataIndex: "index",
+          width: 60,
+          scopedSlots: { customRender: "index" },
+          i18nKey: "colIndex"
+        },
         {
           checked: true, // 是否默认勾选
           checkDisabled: true, // 是否默认禁用
@@ -364,7 +377,16 @@ export default {
         // 币种最新开盘价格数据包
         const res = Object.prototype.hasOwnProperty.call(this.analysis, item)
           ? this.analysis[item]
-          : {};
+          : {
+              amount: 0,
+              close: 0,
+              count: 0,
+              high: 0,
+              id: 0,
+              low: 0,
+              open: 0,
+              vol: 0
+            };
         // 币种最新价
         const coinClose = res && res.tick ? res.tick.close : 0;
         // 币种开盘价
@@ -434,18 +456,43 @@ export default {
           // 卖出均价
           saleCostPrice,
           // 净成本
-          flatCost
+          flatCost,
+          list: {
+            buy,
+            sale,
+            coinClose,
+            coinOpen,
+            buyCount,
+            buyCounts,
+            buyAmount,
+            saleCount,
+            saleAmount,
+            saleVolume,
+            saleCostPrice,
+            buyAveragePrice,
+            coinCount,
+            costPrice,
+            totalNetValue,
+            gains,
+            todayGains,
+            todayGainsUps,
+            gainsUps,
+            flatCost
+          }
         });
       });
-
+      // 总净成本
       const totalAllCost = list.reduce((a, b) => NP.plus(a, b.flatCost), 0);
+      // 总收益
       const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
+      // 今日总收益
       const totalTodayGains = list.reduce(
         (a, b) => NP.plus(a, b.todayGains),
         0
       );
       // 所有币种数据统计
       list.push({
+        index: "-",
         id: "total",
         name: "合计",
         close: "-",
@@ -466,9 +513,14 @@ export default {
         // 今日总收益
         todayGains: totalTodayGains,
         saleCostPrice: "-",
-        // 总成本
+        // 总净成本
         flatCost: totalAllCost,
-        action: false
+        action: false,
+        list: {
+          totalAllCost,
+          allGains,
+          totalTodayGains
+        }
       });
       return list;
     }

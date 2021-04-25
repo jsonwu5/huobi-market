@@ -29,16 +29,20 @@
       </div>
 
       <a-table
-        :pagination="false"
+        :loading="loading"
+        :pagination="pagination"
         :columns="selectedColumns"
         :dataSource="data"
         :rowKey="(record, index) => index"
         :scroll="{ y: scrollHeight }"
         :rowClassName="rowClassName"
+        @change="handleTableChange"
         bordered
       >
         <template slot-scope="text, row, index" slot="index">
-          <span>{{ index + 1 }}</span>
+          <span>{{
+            (params.pageNumber - 1) * params.resultSize + (index + 1)
+          }}</span>
         </template>
         <span slot="created" slot-scope="created">{{
           created | formatDate
@@ -81,6 +85,7 @@
 import { mapGetters, mapState, mapMutations } from "vuex";
 import CustomColumns from "@components/common/customColumns";
 import NP from "number-precision";
+import { getDataByPage } from "@/tools";
 
 export default {
   name: "record",
@@ -218,7 +223,21 @@ export default {
           i18nKey: "colOperation"
         }
       ],
-      data: []
+      data: [],
+      loading: false,
+      pagination: {
+        current: 1, // 当前页面
+        hideOnSinglePage: false, // 只有一页时是否隐藏分页器
+        total: 0,
+        pageSize: 20, // 默认每页显示数量
+        showSizeChanger: true, // 显示可改变每页数量
+        pageSizeOptions: ["10", "20", "30", "40", "50", "100", "150", "200"], // 每页数量选项
+        showTotal: total => `共 ${total} 条` // 显示总数
+      },
+      params: {
+        pageNumber: 1,
+        resultSize: 20
+      }
     };
   },
   computed: {
@@ -252,11 +271,23 @@ export default {
     }
   },
   created() {
-    this.data = JSON.parse(JSON.stringify(this.list));
+    this.originalData = JSON.parse(JSON.stringify(this.list));
+    this.getList();
     this.selectedColumns = this.columns.filter(item => item.checked);
   },
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
+    handleTableChange(pagination) {
+      const pager = { ...this.pagination };
+      pager.current = pagination.current;
+      pager.pageSize = pagination.pageSize;
+      this.pagination = pager;
+      if (this.params.pageNumber !== pagination.current) {
+        this.params.pageNumber = pagination.current;
+        this.params.resultSize = pagination.pageSize;
+        this.getList();
+      }
+    },
     close() {
       this.$emit("update", false);
     },
@@ -265,6 +296,20 @@ export default {
         (item, index) => row.index !== index
       );
       this._setBuySellRecords(arr);
+    },
+    getList(refresh = false) {
+      if (refresh) {
+        this.params.pageNumber = 1;
+      }
+      this.loading = true;
+      getDataByPage(this.originalData, this.params)
+        .then(res => {
+          this.data = res.list;
+          this.pagination.total = res.total;
+        })
+        .finally(() => {
+          this.loading = false;
+        });
     }
   }
 };

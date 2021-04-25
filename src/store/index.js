@@ -1,7 +1,7 @@
 import Vue from "vue";
 import Vuex from "vuex";
 import $http from "@/http";
-import { searchByKeyword } from "@/tools";
+import { searchByKeyword, getDataByPage } from "@/tools";
 import { setStorage, getStorage, KYELIST } from "@/tools/storage.js";
 
 Vue.use(Vuex);
@@ -163,22 +163,9 @@ export default new Vuex.Store({
       if (coinName) {
         list = searchByKeyword(state.coinList, coinName);
       }
-      let res = {
-        // 1 10  0 10
-        // 2 10  10 20
-        // 3 10 20 30
-        list: list.slice(
-          (pageNumber - 1) * resultSize,
-          (pageNumber - 1) * resultSize + resultSize
-        ),
-        total: list.length
-      };
-      return new Promise(resolve => {
-        const timer = setTimeout(() => {
-          commit("_setCoinSelectList", res.list);
-          clearTimeout(timer);
-          resolve(res);
-        }, 100);
+      return getDataByPage(list, { pageNumber, resultSize }).then(res => {
+        commit("_setCoinSelectList", res.list);
+        return res;
       });
     },
     /**
