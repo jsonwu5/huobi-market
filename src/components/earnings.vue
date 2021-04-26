@@ -25,6 +25,19 @@
           <a-icon class="mr15 pointer f18" type="upload" />
         </a-upload>
       </a-tooltip>
+      <div class="flex ac">
+        <span slot="reference" class="mr10"
+          >隐藏小额币种
+          <a-popover title="说明">
+            <template slot="content">
+              <p>持有价值低于$1美元的币种不在表格中展示</p>
+            </template>
+            <a-icon class="pointer" type="question-circle" />
+          </a-popover>
+        </span>
+
+        <a-switch v-model="hideSmallCoin" />
+      </div>
     </div>
     <a-table
       :loading="loading"
@@ -127,6 +140,7 @@ export default {
       coinName: "",
       isDev: process.env.NODE_ENV === "development",
       loading: false,
+      hideSmallCoin: true,
 
       wsUrl: process.env.VUE_APP_WS,
       lockReconnect: false, // 连接失败不进行重连
@@ -353,8 +367,8 @@ export default {
       });
       return symbol;
     },
-    records() {
-      let list = [];
+    allRecords() {
+      const list = [];
       Object.keys(this.recordsByCoin).forEach(item => {
         const arr = this.recordsByCoin[item];
         // item中的字段说明
@@ -431,8 +445,7 @@ export default {
         gainsUps = NP.times(gainsUps, 100);
         // 净成本 = 买入总金额 - N次卖出总金额（含手续费）
         const flatCost = NP.minus(buyAmount, saleVolume);
-
-        list.push({
+        const listItem = {
           id: item,
           close: coinClose,
           tick: res.tick,
@@ -479,14 +492,35 @@ export default {
             gainsUps,
             flatCost
           }
-        });
+        };
+        list.push(listItem);
       });
+      return list;
+    },
+    records() {
+      const list = [];
+      this.allRecords.filter(item => {
+        // 开启隐藏小额币种时，只有大于等于1美元的币种才显示在表格
+        if (
+          (this.hideSmallCoin && item.totalNetValue >= 1) ||
+          item.close === 0
+        ) {
+          list.push(item);
+        }
+        if (!this.hideSmallCoin) {
+          list.push(item);
+        }
+      });
+
       // 总净成本
-      const totalAllCost = list.reduce((a, b) => NP.plus(a, b.flatCost), 0);
+      const totalAllCost = this.allRecords.reduce(
+        (a, b) => NP.plus(a, b.flatCost),
+        0
+      );
       // 总收益
-      const allGains = list.reduce((a, b) => NP.plus(a, b.gains), 0);
+      const allGains = this.allRecords.reduce((a, b) => NP.plus(a, b.gains), 0);
       // 今日总收益
-      const totalTodayGains = list.reduce(
+      const totalTodayGains = this.allRecords.reduce(
         (a, b) => NP.plus(a, b.todayGains),
         0
       );
@@ -500,7 +534,10 @@ export default {
         costPrice: "-",
         averagePrice: "-",
         // 总价值
-        totalNetValue: list.reduce((a, b) => NP.plus(a, b.totalNetValue), 0),
+        totalNetValue: this.allRecords.reduce(
+          (a, b) => NP.plus(a, b.totalNetValue),
+          0
+        ),
         // 总收益
         gains: allGains,
         // 今日所有币种收益率涨跌幅 = 今日总收益 / 总净成本
