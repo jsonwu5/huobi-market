@@ -66,6 +66,16 @@ export default {
     ...mapState(["userLang", "openType", "manifest"]),
     ...mapGetters(["i18n"])
   },
+  watch: {
+    i18n: {
+      handler() {
+        // 设置标签页/窗口标题
+        document.title = `${this.i18n.extName || "火币行情助手"} - v${
+          this.manifest.version
+        }`;
+      }
+    }
+  },
   created() {
     let openType = getQueryString("openType");
     openType = Number(openType);
@@ -81,13 +91,6 @@ export default {
       }
       this._getManifest();
       this._getLanguageAll();
-
-      // 设置标签页/窗口标题
-      this.$nextTick(() => {
-        document.title = `${this.manifest.name || "火币行情助手"} - v${
-          this.manifest.version
-        }`;
-      });
     });
   },
   methods: {
