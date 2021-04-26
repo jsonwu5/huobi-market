@@ -420,14 +420,19 @@ export default {
         // N次卖出总金额（含手续费）
         const saleVolume = sale.reduce((a, b) => NP.plus(a, b.volume), 0);
         // 卖出均价 = N次卖出总金额（含手续费） / N次卖出总数量
-        const saleCostPrice = NP.divide(saleVolume, saleCount);
+        const saleCostPrice =
+          saleCount > 0 ? NP.divide(saleVolume, saleCount) : 0;
         // 买入均价 = N次买入总金额 / N次买入币总数量（含手续费）
-        const buyAveragePrice = NP.divide(buyAmount, buyCounts);
+        const buyAveragePrice =
+          buyCounts > 0 ? NP.divide(buyAmount, buyCounts) : 0;
 
         // 持币数量 = N次买入的币总数量（减去手续费的实际数量） - N次卖出的币总数量
         const coinCount = NP.minus(buyCount, saleCount);
         // 成本价 = （N次买入总金额 - N次卖出总金额（含手续费））/ 持币数量
-        const costPrice = NP.divide(NP.minus(buyAmount, saleVolume), coinCount);
+        const costPrice =
+          coinCount === 0
+            ? 0
+            : NP.divide(NP.minus(buyAmount, saleVolume), coinCount);
         // 当前持币总价值 = 持币数量 * 币最新价
         const totalNetValue = NP.times(coinCount, coinClose);
         // 总收益 = 当前持币总价值 + 卖出的总金额（减去手续费的实际金额） - N次买入总金额
