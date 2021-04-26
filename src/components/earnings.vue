@@ -113,7 +113,7 @@
 <script>
 import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
-import { blob2json, throttle } from "@tools";
+import { blob2json, throttle, deBonce } from "@tools";
 import Record from "@components/dialog/record";
 import CustomColumns from "@components/common/customColumns";
 
@@ -669,14 +669,21 @@ export default {
     },
 
     reconnect() {
-      console.log("尝试重连");
-      if (this.lockReconnect || this.maxReconnect <= 0) {
-        return;
-      }
-      setTimeout(() => {
-        // this.maxReconnect-- // 不做限制 连不上一直重连
-        this.initWebSocket();
-      }, 10 * 1000);
+      deBonce(() => {
+        console.log("尝试重连");
+        this.$message.info({
+          content: "连接中断，正在尝试重连……",
+          key: "lockReconnect"
+        });
+        if (this.lockReconnect || this.maxReconnect <= 0) {
+          this.loading = false;
+          return;
+        }
+        this.timer = setTimeout(() => {
+          this.maxReconnect--;
+          this.initWebSocket();
+        }, 10 * 1000);
+      }, 1000);
     },
     // 初始化websocket
     initWebSocket() {
