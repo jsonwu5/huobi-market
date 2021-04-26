@@ -1,5 +1,5 @@
 <template>
-  <a-config-provider :locale="zhCN">
+  <a-config-provider :locale="locale[userLang]">
     <div class="app">
       <div class="flex jsb ac tabs pr5">
         <a-tabs v-model="activeKey" class="flex-1">
@@ -58,7 +58,10 @@ export default {
   components: { Setting, Earnings, Market },
   data() {
     return {
-      zhCN: zhCN,
+      locale: {
+        zh_CN: zhCN,
+        en: null
+      },
       activeKey: "earnings"
     };
   },
