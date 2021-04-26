@@ -31,12 +31,8 @@ export function setStorage(obj) {
 export function getStorage(keys) {
   // 只能传递数组给largeSync，否则取不出值
   let key = typeof keys === "string" ? [keys] : keys;
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.largeSync.get(key, resolve);
-    } catch (e) {
-      reject(e);
-    }
+  return new Promise(resolve => {
+    chrome.storage.largeSync.get(key, resolve);
   });
 }
 
@@ -55,11 +51,12 @@ export function setLocalStorage(obj) {
  */
 export function getLocalStorage(key) {
   return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.local.get(key, resolve);
-    } catch (e) {
-      reject(e);
-    }
+    chrome.storage.local.get(key, res => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(res);
+    });
   });
 }
 
@@ -68,12 +65,8 @@ export function getLocalStorage(key) {
  * @returns {Promise<unknown>}
  */
 export function clearStorage() {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.largeSync.clear(resolve);
-    } catch (e) {
-      reject(e);
-    }
+  return new Promise(resolve => {
+    chrome.storage.largeSync.clear(resolve);
   });
 }
 
@@ -83,10 +76,11 @@ export function clearStorage() {
  */
 export function clearLocalStorage() {
   return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.local.clear(resolve);
-    } catch (e) {
-      reject(e);
-    }
+    chrome.storage.local.clear(res => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(res);
+    });
   });
 }
