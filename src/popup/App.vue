@@ -95,9 +95,11 @@ export default {
       this._getManifest();
       this._getLanguageAll();
     });
+
+    this._getExchangeRate();
   },
   methods: {
-    ...mapActions(["_getManifest", "_getLanguageAll"]),
+    ...mapActions(["_getManifest", "_getLanguageAll", "_getExchangeRate"]),
     ...mapMutations(["_setUserLang", "_setOpenType"]),
     openInTab(e) {
       // 以浏览器标签页打开

@@ -7,8 +7,9 @@ const $http = axios.create({
 });
 
 function handleSuccess(data) {
-  if (data.status === "ok") {
-    return Promise.resolve(data);
+  // data.code === 200 https://www.huobi.com/-/xxx 火币官网的一些接口
+  if (data.status === "ok" || data.code === 200) {
+    return Promise.resolve(data || data);
   } else {
     message.error({
       content: data.message,

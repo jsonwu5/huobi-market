@@ -38,7 +38,9 @@ export default new Vuex.Store({
     // 现货买卖记录
     buySellRecords: [],
     // 以什么方式打开插件0 = 插件popup页面 1 = 浏览器标签页 2 = 独立窗口页面
-    openType: 0
+    openType: 0,
+    // 汇率列表
+    exchangeRate: []
   },
   getters: {
     i18n: state => {
@@ -105,6 +107,9 @@ export default new Vuex.Store({
     },
     _setOpenType(state, val) {
       state.openType = val;
+    },
+    _setExchangeRate(state, val) {
+      state.exchangeRate = val;
     }
   },
   actions: {
@@ -217,6 +222,16 @@ export default new Vuex.Store({
         item => item.symbol.split("/")[0] !== coin
       );
       commit("_setBuySellRecords", list);
+    },
+    // 获取火币官网汇率列表
+    _getExchangeRate({ commit }) {
+      return this.$http
+        .get("https://www.huobi.com/-/x/general/exchange_rate/list")
+        .then(res => {
+          console.log(res);
+          commit("_setExchangeRate", res.data || []);
+          return res;
+        });
     }
   },
   modules: {}
