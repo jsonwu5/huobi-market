@@ -737,6 +737,7 @@ export default {
   }
 };
 </script>
+<!--suppress CssInvalidPropertyValue -->
 <style lang="less">
 .index {
   overflow: auto;
