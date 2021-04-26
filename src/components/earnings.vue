@@ -341,7 +341,7 @@ export default {
     ...mapState(["upsColor", "buySellRecords", "manifest", "openType"]),
     ...mapGetters(["i18n"]),
     scrollHeight() {
-      return this.openType === 0 ? 400 : document.body.clientHeight - 200;
+      return this.openType === 0 ? 400 : document.body.clientHeight * 0.8;
     },
     earningsStyles() {
       // 当前是否显示了滚动条
@@ -708,14 +708,14 @@ export default {
     reconnect() {
       deBonce(() => {
         console.log("尝试重连");
-        this.$message.info({
-          content: "连接中断，正在尝试重连……",
-          key: "lockReconnect"
-        });
         if (this.lockReconnect || this.maxReconnect <= 0) {
           this.loading = false;
           return;
         }
+        this.$message.info({
+          content: "连接中断，正在尝试重连……",
+          key: "lockReconnect"
+        });
         this.timer = setTimeout(() => {
           this.maxReconnect--;
           this.initWebSocket();

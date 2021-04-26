@@ -244,7 +244,7 @@ export default {
     ...mapState(["buySellRecords", "openType"]),
     ...mapGetters(["i18n"]),
     scrollHeight() {
-      return this.openType === 0 ? 300 : document.body.clientHeight;
+      return this.openType === 0 ? 300 : document.body.clientHeight * 0.6;
     },
     records() {
       return this.buySellRecords.map((item, index) => ({ ...item, index }));
@@ -278,6 +278,7 @@ export default {
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
     handleTableChange(pagination) {
+      console.log(pagination);
       const pager = { ...this.pagination };
       pager.current = pagination.current;
       pager.pageSize = pagination.pageSize;
@@ -286,6 +287,10 @@ export default {
         this.params.pageNumber = pagination.current;
         this.params.resultSize = pagination.pageSize;
         this.getList();
+      }
+      if (this.params.resultSize !== pagination.pageSize) {
+        this.params.resultSize = pagination.pageSize;
+        this.getList(true);
       }
     },
     close() {

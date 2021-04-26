@@ -569,14 +569,14 @@ export default {
     reconnect() {
       deBonce(() => {
         console.log("尝试重连");
-        this.$message.info({
-          content: "连接中断，正在尝试重连……",
-          key: "lockReconnect"
-        });
         if (this.lockReconnect || this.maxReconnect <= 0) {
           this.loading = false;
           return;
         }
+        this.$message.info({
+          content: "连接中断，正在尝试重连……",
+          key: "lockReconnect"
+        });
         this.timer = setTimeout(() => {
           this.maxReconnect--;
           this.initWebSocket();
