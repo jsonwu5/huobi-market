@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/jsonwu5/huobi-market#readme",
   "dependencies": {
+    "ant-design-vue": "1.7.3",
     "axios": "^0.21.1",
     "chrome-storage-largesync": "0.0.4",
     "crypto-js": "^3.1.9-1",
