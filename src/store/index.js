@@ -225,7 +225,7 @@ export default new Vuex.Store({
     },
     // 获取火币官网汇率列表
     _getExchangeRate({ commit }) {
-      return this.$http
+      return $http
         .get("https://www.huobi.com/-/x/general/exchange_rate/list")
         .then(res => {
           console.log(res);
