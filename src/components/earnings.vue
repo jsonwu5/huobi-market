@@ -746,6 +746,7 @@ export default {
       }
     },
     websocketOnOpen() {
+      this.maxReconnect = 5;
       this.loading = false;
       console.log("WebSocket连接成功", this.socket.readyState);
       // 循环订阅每个币种的主题消息d
