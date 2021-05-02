@@ -51,6 +51,25 @@
       <template slot-scope="text, row, index" slot="index">
         <span>{{ index + 1 }}</span>
       </template>
+
+      <template slot="ups" slot-scope="value, row">
+        <div v-if="value === '-'">-</div>
+        <a-tag
+          v-else
+          :color="
+            row.ups >= 0
+              ? upsColor
+                ? 'volcano'
+                : 'green'
+              : upsColor
+              ? 'green'
+              : 'volcano'
+          "
+        >
+          {{ `${row.ups > 0 ? "+" + row.ups : row.ups}%` }}
+        </a-tag>
+      </template>
+
       <template slot="gains" slot-scope="value, row">
         <a-tag :color="colorHandel(row.gains)">
           <span>{{ `$${NP.round(row.gains, 2)}` }}</span>
@@ -126,7 +145,7 @@
 <script>
 import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
-import { blob2json, throttle, deBonce } from "@tools";
+import { blob2json, throttle, deBonce, formatNum } from "@tools";
 import Record from "@components/dialog/record";
 import CustomColumns from "@components/common/customColumns";
 
@@ -191,7 +210,7 @@ export default {
           title: "最新价",
           align: "left",
           dataIndex: "close",
-          width: 80,
+          // width: 80,
           customRender: val => {
             return val !== "-" ? `$${val}` : val;
           },
@@ -199,7 +218,95 @@ export default {
           i18nKey: "colClose"
         },
         {
-          checked: true, // 是否默认勾选
+          title: "涨跌幅",
+          align: "left",
+          dataIndex: "ups",
+          ellipsis: false,
+          checked: true,
+          checkDisabled: false,
+          scopedSlots: { customRender: "ups" },
+          sorter: (a, b) => a.ups - b.ups,
+          i18nKey: "colUps"
+        },
+        {
+          title: "最低",
+          align: "left",
+          dataIndex: "low",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          customRender: val => {
+            return val !== "-" ? `$${val}` : val;
+          },
+          sorter: (a, b) => a.low - b.low,
+          i18nKey: "colLow"
+        },
+        {
+          title: "最高",
+          align: "left",
+          dataIndex: "high",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          customRender: val => {
+            return val !== "-" ? `$${val}` : val;
+          },
+          sorter: (a, b) => a.high - b.high,
+          i18nKey: "colHigh"
+        },
+        {
+          title: "开盘",
+          align: "left",
+          dataIndex: "open",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          sorter: (a, b) => a.open - b.open,
+          i18nKey: "colOpen"
+        },
+        {
+          title: "成交额",
+          align: "left",
+          dataIndex: "vol",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          customRender: vol => {
+            if (vol === "-") return vol;
+            const unit = 100000000;
+            const val =
+              vol > 10000
+                ? NP.round(NP.divide(vol, unit), 2) + "亿"
+                : NP.round(vol, 2);
+            return `￥${val}`;
+          },
+          sorter: (a, b) => a.vol - b.vol,
+          i18nKey: "colVol"
+        },
+        {
+          title: "成交量",
+          align: "left",
+          dataIndex: "amount",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          customRender: val => formatNum(val),
+          sorter: (a, b) => a.amount - b.amount,
+          i18nKey: "colAmount"
+        },
+        {
+          title: "成交笔数",
+          align: "left",
+          dataIndex: "count",
+          ellipsis: true,
+          checked: false,
+          checkDisabled: false,
+          customRender: val => formatNum(val),
+          sorter: (a, b) => a.count - b.count,
+          i18nKey: "colCount"
+        },
+        {
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "成本价",
           align: "left",
@@ -256,7 +363,7 @@ export default {
           i18nKey: "colSaleCostPrice"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "持有价值",
           align: "left",
@@ -303,7 +410,7 @@ export default {
           i18nKey: "colTodayGainsUps"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "总收益",
           align: "left",
@@ -316,7 +423,7 @@ export default {
           i18nKey: "colGains"
         },
         {
-          checked: true, // 是否默认勾选
+          checked: false, // 是否默认勾选
           checkDisabled: false, // 是否默认禁用
           title: "总收益率",
           align: "left",
@@ -389,8 +496,11 @@ export default {
         const buy = arr.filter(a => a.role === "买入");
         const sale = arr.filter(a => a.role === "卖出");
         // 币种最新开盘价格数据包
-        const res = Object.prototype.hasOwnProperty.call(this.analysis, item)
-          ? this.analysis[item]
+        const coinData = Object.prototype.hasOwnProperty.call(
+          this.analysis,
+          item
+        )
+          ? this.analysis[item].tick
           : {
               amount: 0,
               close: 0,
@@ -401,10 +511,19 @@ export default {
               open: 0,
               vol: 0
             };
+        delete coinData.id;
         // 币种最新价
-        const coinClose = res && res.tick ? res.tick.close : 0;
+        const coinClose = coinData.close;
         // 币种开盘价
-        const coinOpen = res && res.tick ? res.tick.open : 0;
+        const coinOpen = coinData.open;
+        // 币涨跌幅
+        coinData.ups =
+          coinClose > 0
+            ? NP.times(
+                NP.round(NP.divide(NP.minus(coinClose, coinOpen), coinOpen), 4),
+                100
+              )
+            : 0;
 
         // N次买入的币总数量（减去手续费后的实际数量）
         const buyCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
@@ -453,7 +572,8 @@ export default {
         const listItem = {
           id: item,
           close: coinClose,
-          tick: res.tick,
+          tick: coinData,
+          ...coinData,
           name: item,
           // 持币数量
           coinCount,
@@ -475,6 +595,7 @@ export default {
           saleCostPrice,
           // 净成本
           flatCost,
+          // 开发调试查看数据用
           list: {
             buy,
             sale,
@@ -538,6 +659,14 @@ export default {
         coinCount: "-",
         costPrice: "-",
         averagePrice: "-",
+        tick: "-",
+        amount: "-",
+        count: "-",
+        high: "-",
+        low: "-",
+        open: "-",
+        vol: "-",
+        ups: "-",
         // 总价值
         totalNetValue: this.allRecords.reduce(
           (a, b) => NP.plus(a, b.totalNetValue),
