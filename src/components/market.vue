@@ -113,9 +113,9 @@ import { mapActions, mapMutations, mapState, mapGetters } from "vuex";
 import CustomColumns from "@components/common/customColumns";
 
 // 当用户的自选为空时，使用内置默认的自选
-const DEFAULTCOINS = ["btc", "eth", "ltc", "ht"];
+const DEFAULT_COINS = ["btc", "eth", "ltc", "ht"];
 // 默认的列宽度数值
-const DEFAULTWIDTHS = [
+const DEFAULT_WIDTHS = [
   { dataIndex: "name", width: 50 },
   { dataIndex: "ups", width: 80 },
   { dataIndex: "close", width: 80 },
@@ -369,7 +369,7 @@ export default {
     },
     indexStyle() {
       const arr = [];
-      DEFAULTWIDTHS.forEach(item => {
+      DEFAULT_WIDTHS.forEach(item => {
         if (this.selectedColumns.some(i => i.dataIndex === item.dataIndex)) {
           arr.push(item);
         }
@@ -407,7 +407,7 @@ export default {
       this.selectedColumns = this.columns.filter(item => item.checked);
       // 列宽度数值初始化处理，先判断缓存中有没有，没有就使用默认的配置
       const widths =
-        this.tableWidths.length > 0 ? this.tableWidths : DEFAULTWIDTHS;
+        this.tableWidths.length > 0 ? this.tableWidths : DEFAULT_WIDTHS;
       this.defColumns.forEach(item => {
         widths.some(wItem => {
           if (wItem.dataIndex === item.dataIndex) {
@@ -437,7 +437,7 @@ export default {
     // 恢复默认列宽度
     resetWidth() {
       this.defColumns.forEach(item => {
-        DEFAULTWIDTHS.some(wItem => {
+        DEFAULT_WIDTHS.some(wItem => {
           if (wItem.dataIndex === item.dataIndex) {
             item.width = wItem.width;
           }
@@ -486,14 +486,14 @@ export default {
       this.optionalCoins = JSON.parse(JSON.stringify(this.myCoinList));
       // 用户刚安装，没有自选时，使用内置默认的自选
       if (this.optionalCoins.length === 0) {
-        this.optionalCoins = DEFAULTCOINS;
+        this.optionalCoins = DEFAULT_COINS;
         // 并缓存到本地
-        this._setMyCoinList(DEFAULTCOINS);
+        this._setMyCoinList(DEFAULT_COINS);
       }
       // 用户刚安装
       if (this.stickList.length === 0) {
         // 使用默认的并缓存到本地
-        this._setStickList(DEFAULTCOINS);
+        this._setStickList(DEFAULT_COINS);
       }
       const marketList = [];
       // 组合成table需要的数据格式
