@@ -42,7 +42,7 @@
     <a-table
       :loading="loading"
       :columns="selectedColumns"
-      :dataSource="records"
+      :dataSource="tableData"
       :rowKey="record => record.id"
       :pagination="false"
       :scroll="{ y: scrollHeight }"
@@ -138,14 +138,19 @@
       <div slot="action" v-else>-</div>
     </a-table>
 
-    <record v-if="visible" v-model="visible" :coin="coinName"></record>
+    <record
+      v-if="visible"
+      v-model="visible"
+      :coinName="coinName"
+      :coinData="analysis"
+    ></record>
   </div>
 </template>
 
 <script>
 import NP from "number-precision";
 import { mapGetters, mapState, mapMutations, mapActions } from "vuex";
-import { blob2json, throttle, deBonce, formatNum } from "@tools";
+import { blob2json, throttle, deBonce, formatNum, calcEarnings } from "@tools";
 import Record from "@components/dialog/record";
 import CustomColumns from "@components/common/customColumns";
 
@@ -463,6 +468,7 @@ export default {
           this.openType > 0 ? "100%" : `calc(800px - ${20 + scrollWidth}px)`
       };
     },
+    // 按币种归类加减仓数据
     recordsByCoin() {
       const symbol = {};
       this.buySellRecords.forEach(item => {
@@ -474,27 +480,11 @@ export default {
       });
       return symbol;
     },
-    allRecords() {
+    // 所有币种收益分析数据
+    allEarnings() {
       const list = [];
       Object.keys(this.recordsByCoin).forEach(item => {
         const arr = this.recordsByCoin[item];
-        // item中的字段说明
-        //  {
-        //   amount: 520.1395,               // 数量
-        //   coin: "oxt",                    // 币种
-        //   created: "2021-04-23 10:37:00", // 时间
-        //   points: 1.040279,               // 手续费
-        //   pointsUnit: "oxt",              // 手续费币种
-        //   price: 0.5278,                  // 价格
-        //   realAmount: 519.099221,         // 减去手续费的实际数量
-        //   realVolume: 274.5296281,        // 减去手续费的实际成交额
-        //   role: "买入",                    // 方向
-        //   symbol: "oxt/usdt",             // 交易对
-        //   type: "币币交易",                 // 交易类型
-        //   volume: 274.5296281             // 成交额
-        // };
-        const buy = arr.filter(a => a.role === "买入");
-        const sale = arr.filter(a => a.role === "卖出");
         // 币种最新开盘价格数据包
         const coinData = Object.prototype.hasOwnProperty.call(
           this.analysis,
@@ -512,120 +502,14 @@ export default {
               vol: 0
             };
         delete coinData.id;
-        // 币种最新价
-        const coinClose = coinData.close;
-        // 币种开盘价
-        const coinOpen = coinData.open;
-        // 币涨跌幅
-        coinData.ups =
-          coinClose > 0
-            ? NP.times(
-                NP.round(NP.divide(NP.minus(coinClose, coinOpen), coinOpen), 4),
-                100
-              )
-            : 0;
-
-        // N次买入的币总数量（减去手续费后的实际数量）
-        const buyCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
-        // N次买入币总数量（含手续费）
-        const buyCounts = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
-        // N次买入总金额
-        const buyAmount = buy.reduce((a, b) => NP.plus(a, b.volume), 0);
-
-        // N次卖出的币总数量
-        const saleCount = sale.reduce((a, b) => NP.plus(a, b.realAmount), 0);
-        // N次卖出总金额（减去手续费后的实际总金额）
-        const saleAmount = sale.reduce((a, b) => NP.plus(a, b.realVolume), 0);
-        // N次卖出总金额（含手续费）
-        const saleVolume = sale.reduce((a, b) => NP.plus(a, b.volume), 0);
-        // 卖出均价 = N次卖出总金额（含手续费） / N次卖出总数量
-        const saleCostPrice =
-          saleCount > 0 ? NP.divide(saleVolume, saleCount) : 0;
-        // 买入均价 = N次买入总金额 / N次买入币总数量（含手续费）
-        const buyAveragePrice =
-          buyCounts > 0 ? NP.divide(buyAmount, buyCounts) : 0;
-
-        // 持币数量 = N次买入的币总数量（减去手续费的实际数量） - N次卖出的币总数量
-        const coinCount = NP.minus(buyCount, saleCount);
-        // 成本价 = （N次买入总金额 - N次卖出总金额（含手续费））/ 持币数量
-        const costPrice =
-          coinCount === 0
-            ? 0
-            : NP.divide(NP.minus(buyAmount, saleVolume), coinCount);
-        // 当前持币总价值 = 持币数量 * 币最新价
-        const totalNetValue = NP.times(coinCount, coinClose);
-        // 总收益 = 当前持币总价值 + 卖出的总金额（减去手续费的实际金额） - N次买入总金额
-        const gains = NP.minus(NP.plus(totalNetValue, saleAmount), buyAmount);
-        // 当天的收益估算金额 = (最新价 - 开盘价) * 持有数量
-        const todayGains = NP.times(NP.minus(coinClose, coinOpen), coinCount);
-        // 当天的收益涨跌幅 = (最新价 - 成本价) / 成本价 - (开盘价 - 成本价) / 成本价
-        let todayGainsUps = NP.minus(
-          NP.divide(NP.minus(coinClose, costPrice), costPrice),
-          NP.divide(NP.minus(coinOpen, costPrice), costPrice)
-        );
-        todayGainsUps = NP.times(NP.round(todayGainsUps, 4), 100);
-        // 单个币种总收益率 = 总收益 / N次买入总金额
-        let gainsUps = NP.round(NP.divide(gains, buyAmount), 4);
-        gainsUps = NP.times(gainsUps, 100);
-        // 净成本 = 买入总金额 - N次卖出总金额（含手续费）
-        const flatCost = NP.minus(buyAmount, saleVolume);
-        const listItem = {
-          id: item,
-          close: coinClose,
-          tick: coinData,
-          ...coinData,
-          name: item,
-          // 持币数量
-          coinCount,
-          // 买入均价
-          averagePrice: buyAveragePrice,
-          // 成本价
-          costPrice,
-          // 持有价值
-          totalNetValue,
-          // 总收益
-          gains,
-          // 持币总收益率
-          gainsUps,
-          // 当天的收益估算金额
-          todayGains,
-          // 当天的收益涨跌幅
-          todayGainsUps,
-          // 卖出均价
-          saleCostPrice,
-          // 净成本
-          flatCost,
-          // 开发调试查看数据用
-          list: {
-            buy,
-            sale,
-            coinClose,
-            coinOpen,
-            buyCount,
-            buyCounts,
-            buyAmount,
-            saleCount,
-            saleAmount,
-            saleVolume,
-            saleCostPrice,
-            buyAveragePrice,
-            coinCount,
-            costPrice,
-            totalNetValue,
-            gains,
-            todayGains,
-            todayGainsUps,
-            gainsUps,
-            flatCost
-          }
-        };
-        list.push(listItem);
+        list.push(calcEarnings(item, coinData, arr));
       });
       return list;
     },
-    records() {
+    // 表格展示的数据，且根据开关是否需要显示低于$1美元的币种分析数据
+    tableData() {
       const list = [];
-      this.allRecords.filter(item => {
+      this.allEarnings.filter(item => {
         // 开启隐藏小额币种时，只有大于等于1美元的币种才显示在表格
         if (
           (this.hideSmallCoin && item.totalNetValue >= 1) ||
@@ -639,14 +523,17 @@ export default {
       });
 
       // 总净成本
-      const totalAllCost = this.allRecords.reduce(
+      const totalAllCost = this.allEarnings.reduce(
         (a, b) => NP.plus(a, b.flatCost),
         0
       );
       // 总收益
-      const allGains = this.allRecords.reduce((a, b) => NP.plus(a, b.gains), 0);
+      const allGains = this.allEarnings.reduce(
+        (a, b) => NP.plus(a, b.gains),
+        0
+      );
       // 今日总收益
-      const totalTodayGains = this.allRecords.reduce(
+      const totalTodayGains = this.allEarnings.reduce(
         (a, b) => NP.plus(a, b.todayGains),
         0
       );
@@ -668,7 +555,7 @@ export default {
         vol: "-",
         ups: "-",
         // 总价值
-        totalNetValue: this.allRecords.reduce(
+        totalNetValue: this.allEarnings.reduce(
           (a, b) => NP.plus(a, b.totalNetValue),
           0
         ),
@@ -730,8 +617,8 @@ export default {
         if (event.target.result) {
           this._setBuySellRecords(this.csv2Json(event.target.result));
           // 循环订阅每个币种的主题消息d
-          if (this.socket && this.records.length) {
-            this.records.forEach(item => {
+          if (this.socket && this.tableData.length) {
+            this.tableData.forEach(item => {
               this.getKline(item.name.toLowerCase());
             });
           }
@@ -879,8 +766,8 @@ export default {
       this.loading = false;
       console.log("WebSocket连接成功", this.socket.readyState);
       // 循环订阅每个币种的主题消息d
-      if (this.socket && this.records.length) {
-        this.records.forEach(item => {
+      if (this.socket && this.tableData.length) {
+        this.tableData.forEach(item => {
           this.getKline(item.name.toLowerCase());
         });
       }
@@ -903,7 +790,7 @@ export default {
           // 数据缓存到池子中
           this.dataPool[coinName] = res;
           // 初始化时立即更新一次
-          const coinItem = this.records.filter(
+          const coinItem = this.tableData.filter(
             item => item.name === coinName
           )[0];
           if (!coinItem || !coinItem.close) {

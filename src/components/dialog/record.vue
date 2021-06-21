@@ -27,12 +27,30 @@
         <div class="mr15 mb15">累计减仓数量：{{ calcData.saleCoinCount }}</div>
         <div class="mr15 mb15">当前持仓数量：{{ calcData.totalCoinCount }}</div>
       </div>
+      <div class="flex ac mb15">
+        <div class="flex ac">
+          <div class="pr15">时间筛选</div>
+          <a-range-picker
+            :show-time="{
+              format: 'HH:mm:ss',
+              defaultValue: [
+                moment('00:00:00', 'HH:mm:ss'),
+                moment('23:59:59', 'HH:mm:ss')
+              ]
+            }"
+            format="YYYY-MM-DD"
+            v-model="dates"
+            style="width: 200px"
+            @change="onDatesChange"
+          />
+        </div>
+      </div>
 
       <a-table
         :loading="loading"
         :pagination="pagination"
         :columns="selectedColumns"
-        :dataSource="data"
+        :dataSource="tableData"
         :rowKey="(record, index) => index"
         :scroll="{ y: scrollHeight }"
         :rowClassName="rowClassName"
@@ -82,6 +100,7 @@
 </template>
 
 <script>
+import moment from "moment";
 import { mapGetters, mapState, mapMutations } from "vuex";
 import CustomColumns from "@components/common/customColumns";
 import NP from "number-precision";
@@ -99,13 +118,20 @@ export default {
       type: Boolean,
       default: false
     },
-    coin: {
+    coinName: {
       type: String,
       default: ""
+    },
+    // 币种最新行情数据包
+    coinData: {
+      type: Object,
+      default: () => {}
     }
   },
   data() {
     return {
+      moment,
+      dates: [],
       columnsVisible: false,
       selectedColumns: [],
       checkedList: [],
@@ -223,7 +249,7 @@ export default {
           i18nKey: "colOperation"
         }
       ],
-      data: [],
+      tableData: [],
       loading: false,
       pagination: {
         current: 1, // 当前页面
@@ -236,7 +262,9 @@ export default {
       },
       params: {
         pageNumber: 1,
-        resultSize: 20
+        resultSize: 20,
+        startTime: "",
+        endTime: ""
       }
     };
   },
@@ -246,22 +274,27 @@ export default {
     scrollHeight() {
       return this.openType === 0 ? 300 : document.body.clientHeight * 0.6;
     },
-    records() {
-      return this.buySellRecords.map((item, index) => ({ ...item, index }));
+    // 当前币种行情数据
+    currentCoinData() {
+      return this.coinData[this.coinName];
     },
-    list() {
-      return this.records.filter(item => item.coin === this.coin);
+    // 当前币种加减仓记录数组
+    records() {
+      // 新增index字段用作删除ID使用
+      return this.buySellRecords
+        .map((item, index) => ({ ...item, index }))
+        .filter(item => item.coin === this.coinName);
     },
     calcData() {
-      const buy = this.list.filter(item => item.role === "买入");
-      const sale = this.list.filter(item => item.role === "卖出");
+      const buy = this.records.filter(item => item.role === "买入");
+      const sale = this.records.filter(item => item.role === "卖出");
 
       const buyCoinCount = buy.reduce((a, b) => NP.plus(a, b.realAmount), 0);
       const saleCoinCount = sale.reduce((a, b) => NP.plus(a, b.realAmount), 0);
       return {
         buyCount: buy.length,
         saleCount: sale.length,
-        totalCount: this.list.length,
+        totalCount: this.records.length,
         buyMoney: buy.reduce((a, b) => NP.plus(a, b.realVolume), 0),
         saleNumber: sale.reduce((a, b) => NP.plus(a, b.realVolume), 0),
         buyCoinCount,
@@ -271,14 +304,13 @@ export default {
     }
   },
   created() {
-    this.originalData = JSON.parse(JSON.stringify(this.list));
     this.getList();
     this.selectedColumns = this.columns.filter(item => item.checked);
   },
   methods: {
     ...mapMutations(["_setBuySellRecords"]),
     handleTableChange(pagination) {
-      console.log(pagination);
+      // console.log(pagination);
       const pager = { ...this.pagination };
       pager.current = pagination.current;
       pager.pageSize = pagination.pageSize;
@@ -307,14 +339,24 @@ export default {
         this.params.pageNumber = 1;
       }
       this.loading = true;
-      getDataByPage(this.originalData, this.params)
+      getDataByPage(this.records, this.params)
         .then(res => {
-          this.data = res.list;
+          this.tableData = res.list;
           this.pagination.total = res.total;
         })
         .finally(() => {
           this.loading = false;
         });
+    },
+    onDatesChange(value) {
+      if (value.length) {
+        this.params.startTime = new Date(value[0]).getTime();
+        this.params.endTime = new Date(value[1]).getTime();
+      } else {
+        this.params.startTime = undefined;
+        this.params.endTime = undefined;
+      }
+      this.getList(true);
     }
   }
 };
